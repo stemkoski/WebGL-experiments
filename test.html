@@ -3,7 +3,10 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>WebGL Demo</title>
+    <title>Implicit Function Graphing</title>
+    <link rel="stylesheet" href="js/jquery-ui.min.css">
+	<script src="js/external/jquery/jquery.js"></script>
+	<script src="js/jquery-ui.min.js"></script>
 </head>
 
 <body bgcolor="#EEFCFF">
@@ -224,6 +227,17 @@ function initProgram(gl, vsSource, fsSource)
 
 
 
+</script>
+
+<script>
+
+// Finally, let's apply the jQuery ui-widget font style to the document
+//   by adding the corresponding CSS class to all tags
+//   that may contain text: paragraph, div, label
+$( "p" ).addClass( "ui-widget" );
+$( "div" ).addClass( "ui-widget" );
+$( "label" ).addClass( "ui-widget" );
+    
 </script>
 
 </html>
