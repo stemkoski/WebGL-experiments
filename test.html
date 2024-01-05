@@ -6,8 +6,12 @@
     <title>WebGL Demo</title>
 </head>
 
-<body>
-<canvas id="glcanvas" width="512" height="512"></canvas>
+<body bgcolor="#EEFCFF">
+<br><br>
+<p>Axis range: -1 to +1</p>
+<center>
+<canvas id="glcanvas" width="640" height="640" style="border: 4px solid gray;"></canvas>
+</center>
 </body>
 
 <script>
@@ -15,7 +19,7 @@
 // GPU-based rendering
 var vertexShaderCode = `
 attribute vec2 vertexPosition;
-varying lowp vec2 position;
+varying vec2 position;
 void main() 
 {
     gl_Position = vec4(vertexPosition, 0.0, 1.0);
@@ -26,10 +30,75 @@ void main()
 `;
 
 var fragmentShaderCode = `
-varying lowp vec2 position;
+precision mediump float;
+varying vec2 position;
+
+// linear interpolation
+vec4 lerp(float percent, vec4 minVal, vec4 maxVal)
+{  return minVal + percent * (maxVal - minVal);  }
+
+// inverse lerp
+float percent(float value, float minVal, float maxVal)
+{  return (value - minVal)/(maxVal - minVal);  }
+
+// specify mathematical functions on left/right hand side of an implicit function
+float lhs(float x, float y) 
+{ 
+    return sin(8.0 * x) * y; 
+}
+
+float rhs(float x, float y) 
+{
+    return cos(8.0 * y) * x;
+}
+
 void main() 
 {
-    gl_FragColor = vec4(position, 0.0, 1.0);
+    // default background color
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    // line color
+    vec4 lineColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+    float x = position.x;
+    float y = position.y;
+
+    float thickness = 0.001;
+
+    // given the implicit curve lhs(x,y) = rhs(x,y)
+    // let f(x,y) = lhs(x,y) - rhs(x,y)
+    // the graph of the implicit curve is the set of points where f(x,y) = 0
+    // assume that a pixel corresponds to a point on the curve when the function
+    //   changes sign on at least one of the corners of the pixel
+    // also, apply gradient coloring derived from balance of sign values of f(x,y) 
+
+    /*
+    // optional: color depending on which side is larger
+    if ( lhs(x,y) < rhs(x,y) )
+        gl_FragColor = vec4(0.8, 0.5, 0.5, 1.0);
+    else
+        gl_FragColor = vec4(0.5, 0.5, 0.8, 1.0); 
+    */
+
+    // check a block of pixels for sign changes
+    float pos = 0.0;
+    float neg = 0.0; 
+    for (float dx = -5.0; dx <= +5.0; dx++)
+    { 
+        float ddx = dx * thickness; 
+        for (float dy = -5.0; dy <= +5.0; dy++)
+        {
+            float ddy = dy * thickness;
+            if ( lhs(x+ddx,y+ddy) - rhs(x+ddx,y+ddy) > 0.0 )
+                pos++;
+            else
+                neg++;
+        }
+    }
+    
+    float percent = abs(pos - neg)/(pos + neg);
+    if (pos * neg > 1.0)
+        gl_FragColor = mix(lineColor, gl_FragColor, percent);
+
 }
 `;
 
@@ -72,7 +141,7 @@ function loop()
 
 function render()
 {
-    // console.log("rendering...");
+    console.log("rendering...");
     
     gl.clear(gl.COLOR_BUFFER_BIT);
 
