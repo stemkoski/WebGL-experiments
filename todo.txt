@@ -1,0 +1,19 @@
+[ ] add jQuery
+
+[ ] control thickness of lines with a slider 
+    requires: adding uniform variable to shader
+
+[ ] add textbox to type (implicit) equation, button to process
+    requires: text contains exactly one equals sign
+    replace equals with subtraction (i.e. convert f(x,y) = g(x,y) into h(x,y) = f(x,y) - g(x,y) = 0)
+    create fragment shader string
+    recompile GPU program
+
+[ ] buttons with preset functions
+
+[ ] sliders to adjust axis range (+/- 1 to +/- 10 ?)
+    requires another uniform variable in shader
+
+[ ] toggle to show axes / tick mark dots?
+
+
