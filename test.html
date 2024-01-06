@@ -9,8 +9,49 @@
 	<script src="js/jquery-ui.min.js"></script>
 </head>
 
-<body bgcolor="#EEFCFF">
+<style>
+    body
+    {
+        padding: 16px;
+        background-color: #F8F8FF;
+    }
+
+    .border
+    {
+        border: 1px solid black;
+        padding: 16px;
+        min-height: 16px;
+    }
+
+    input
+    {
+        font-family: 'Courier New', Courier, monospace; 
+        font-weight: bold;
+        font-size: 20px;
+        width: 98%;
+        padding: 10px;
+    }
+</style>
+
+<body>
 <h1>Implicit Function Graphing</h1>
+
+<p>Equation:</p>
+<input type="text" id="equationInput" value="y = 0.8 * sin(8.0 * x)"></input>
+
+<p> <button id="graphButton">Graph Equation</button> </p>
+<script>
+    let graphButton  = $( "#graphButton" ); 
+    let equationInput = $( "#equationInput" );
+    graphButton.button();
+    graphButton.on( "click", function() {
+        let equationText = equationInput.val();
+        equationText = equationText.replace("=", "-");
+        functionString = equationText;
+        shaderProgram = shaderProgramSetup();
+        uniformCurveThickness = gl.getUniformLocation(shaderProgram, "curveThickness");
+    });
+</script>
 
 <p>Curve Thickness:</p>
 <div id="mySlider"> </div>
@@ -19,7 +60,6 @@
     // apply formatting and control values
     mySlider.slider( {min:0.0004, max:0.0044, step:0.0001, value:0.0010, animate:true} );
     mySlider.css( {left:0, width:300} );
-     
 </script>
 
 <p>Axis range: -1 to +1</p>
@@ -30,106 +70,9 @@
 
 <script>
 
-// GPU-based rendering
-var vertexShaderCode = `
-attribute vec2 vertexPosition;
-varying vec2 position;
-void main() 
-{
-    gl_Position = vec4(vertexPosition, 0.0, 1.0);
-    gl_PointSize = 10.0;
-    position = vertexPosition;
-}
-
-`;
-
-var fragmentShaderCode = `
-precision mediump float; 
-varying vec2 position;
-uniform float curveThickness;
-
-// linear interpolation
-vec4 lerp(float percent, vec4 minVal, vec4 maxVal)
-{  return minVal + percent * (maxVal - minVal);  }
-
-// inverse lerp
-float percent(float value, float minVal, float maxVal)
-{  return (value - minVal)/(maxVal - minVal);  }
-
-// specify mathematical functions on left/right hand side of an implicit function
-float lhs(float x, float y) 
-{ 
-    return sin(8.0 * x) * y; 
-}
-
-float rhs(float x, float y) 
-{
-    return cos(8.0 * y) * x;
-}
-
-void main() 
-{
-    // default background color
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-    // line color
-    vec4 lineColor = vec4(0.0, 0.0, 0.0, 1.0);
-
-    float x = position.x;
-    float y = position.y;
-
-    // float thickness = 0.0005;  
-
-    // given the implicit curve lhs(x,y) = rhs(x,y)
-    // let f(x,y) = lhs(x,y) - rhs(x,y)
-    // the graph of the implicit curve is the set of points where f(x,y) = 0
-    // assume that a pixel corresponds to a point on the curve when the function
-    //   changes sign on at least one of the corners of the pixel
-    // also, apply gradient coloring derived from balance of sign values of f(x,y) 
-
-    /*
-    // optional: color depending on which side is larger
-    if ( lhs(x,y) < rhs(x,y) )
-        gl_FragColor = vec4(0.8, 0.5, 0.5, 1.0);
-    else
-        gl_FragColor = vec4(0.5, 0.5, 0.8, 1.0); 
-    */
-
-    // check a block of pixels for sign changes
-    float pos = 0.0;
-    float neg = 0.0; 
-    for (float dx = -5.0; dx <= +5.0; dx++)
-    { 
-        float ddx = dx * curveThickness; 
-        for (float dy = -5.0; dy <= +5.0; dy++)
-        {
-            float ddy = dy * curveThickness;
-            if ( lhs(x+ddx,y+ddy) - rhs(x+ddx,y+ddy) > 0.0 )
-                pos++;
-            else
-                neg++;
-        }
-    }
-    
-    float percent = abs(pos - neg)/(pos + neg);
-    if (pos * neg > 1.0)
-        gl_FragColor = mix(lineColor, gl_FragColor, percent);
-
-}
-`;
+var functionString = "y - 0.8 * sin(8.0 * x) * sin(21.0 * x)";
 
 run();
-
-// optional: user code
-function initialize()
-{
-   // 
-}
-
-// optional: user code
-function update()
-{
-
-}
 
 // --------- //
 // core code //
@@ -141,8 +84,6 @@ var uniformCurveThickness, valueCurveThickness;
 
 function run()
 {
-    // user defined initialization
-    initialize();
     webGLsetup();
     loop();
 }
@@ -151,8 +92,6 @@ function loop()
 {
     // call function on next screen refresh (approx 1/60 sec)
 	requestAnimationFrame( loop ); 
-    // user defined updates
-    update();
     render();
 }
 
@@ -185,7 +124,7 @@ function webGLsetup()
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-    shaderProgram = initProgram(gl, vertexShaderCode, fragmentShaderCode);
+    shaderProgram = shaderProgramSetup();
 
     var vertexPositionLocation = gl.getAttribLocation(shaderProgram, "vertexPosition");
 
@@ -205,6 +144,78 @@ function webGLsetup()
 
     uniformCurveThickness = gl.getUniformLocation(shaderProgram, "curveThickness");
     valueCurveThickness = 0.0004;
+}
+
+function shaderProgramSetup()
+{
+    var vertexShaderCode = `
+    attribute vec2 vertexPosition;
+    varying vec2 position;
+    void main() 
+    {
+        gl_Position = vec4(vertexPosition, 0.0, 1.0);
+        gl_PointSize = 10.0;
+        position = vertexPosition;
+    }
+    `;
+
+    // graph the implicit curve is the set of points where f(x,y) = 0
+    // assume that a pixel corresponds to a point on the curve when the function
+    //   changes sign on at least one of the corners of the pixel
+    // also, apply gradient coloring derived from balance of sign values of f(x,y) 
+
+    var fragmentShaderCode = `
+    precision mediump float; 
+    varying vec2 position;
+    uniform float curveThickness;
+
+    // graph function f(x,y) = 0
+    float f(float x, float y) 
+    { 
+        return ${ functionString };  
+    }
+
+    void main() 
+    {
+        // default background color
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        // line color
+        vec4 lineColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+        float x = position.x;
+        float y = position.y;
+
+        /*
+        // optional: color depending on which side is larger
+        if ( f(x,y) < 0.0 )
+            gl_FragColor = vec4(0.8, 0.5, 0.5, 1.0);
+        else
+            gl_FragColor = vec4(0.5, 0.5, 0.8, 1.0); 
+        */
+
+        // check a block of pixels for sign changes
+        float pos = 0.0;
+        float neg = 0.0; 
+        for (float dx = -5.0; dx <= +5.0; dx++)
+        { 
+            float ddx = dx * curveThickness; 
+            for (float dy = -5.0; dy <= +5.0; dy++)
+            {
+                float ddy = dy * curveThickness;
+                if ( f(x+ddx, y+ddy) > 0.0 )
+                    pos++;
+                else
+                    neg++;
+            }
+        }
+        
+        float percent = abs(pos - neg)/(pos + neg);
+        if (pos * neg > 1.0)
+            gl_FragColor = mix(lineColor, gl_FragColor, percent);
+    }
+    `;
+
+    return initProgram(gl, vertexShaderCode, fragmentShaderCode);
 }
 
 function loadShader(gl, type, source) 
