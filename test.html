@@ -126,7 +126,7 @@ function webGLsetup()
 
     shaderProgram = shaderProgramSetup();
 
-    var vertexPositionLocation = gl.getAttribLocation(shaderProgram, "vertexPosition");
+    const vertexPositionLocation = gl.getAttribLocation(shaderProgram, "vertexPosition");
 
     const positions = [1.0, 1.0,   -1.0, 1.0,   1.0, -1.0,   -1.0, -1.0];
     const positionBuffer = gl.createBuffer();
@@ -182,9 +182,11 @@ function shaderProgramSetup()
         // line color
         vec4 lineColor = vec4(0.0, 0.0, 0.0, 1.0);
 
-        float x = position.x;
-        float y = position.y;
+        float axisRange = 1.0; 
+        float x = position.x * axisRange;
+        float y = position.y * axisRange;
 
+        float adjustCurveThickness = curveThickness * axisRange;
         /*
         // optional: color depending on which side is larger
         if ( f(x,y) < 0.0 )
@@ -198,10 +200,10 @@ function shaderProgramSetup()
         float neg = 0.0; 
         for (float dx = -5.0; dx <= +5.0; dx++)
         { 
-            float ddx = dx * curveThickness; 
+            float ddx = dx * adjustCurveThickness; 
             for (float dy = -5.0; dy <= +5.0; dy++)
             {
-                float ddy = dy * curveThickness;
+                float ddy = dy * adjustCurveThickness;
                 if ( f(x+ddx, y+ddy) > 0.0 )
                     pos++;
                 else
