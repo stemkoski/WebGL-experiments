@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>WebGL Demo</title>
+</head>
+
+<body>
+
+<!-- note: drawing buffer size is different than display style size -->
+<canvas id="glcanvas" width="256" height="256" style="width: 512px; height: 512px; image-rendering: pixelated;"></canvas>
+</body>
+
+<script>
+
+var gl, displayProgram, computeProgram, 
+textureArray = [], framebufferArray = [], index = 0, 
+uniformTextureDisplayLocation, uniformTextureComputeLocation; 
+
+// GPU-based rendering
+var vertexShaderCode = `#version 300 es
+in vec2 vertexPosition;
+out vec2 UV;
+
+void main() 
+{
+    UV = vertexPosition * 0.5 + 0.5;
+    gl_Position = vec4(vertexPosition, 0.0, 1.0);
+}
+`;
+
+var fragmentShaderDisplayCode = `#version 300 es
+precision mediump float;
+in vec2 UV;
+uniform sampler2D u_texture;
+out vec4 fragColor;
+
+void main() 
+{
+    fragColor = texture(u_texture, UV);
+}
+`;
+
+var fragmentShaderComputeCode = `#version 300 es
+precision mediump float;
+in vec2 UV;
+uniform sampler2D u_texture;
+out vec4 fragColor;
+
+void main() 
+{
+    float resolution = 256.0;
+    float s = 1.0 / resolution;
+
+    vec4 data = 0.0 
+        + texture(u_texture, UV + vec2(-s, -s))
+        + texture(u_texture, UV + vec2(-s, 0))
+        + texture(u_texture, UV + vec2(-s, +s))
+        + texture(u_texture, UV + vec2(0, -s))
+        + texture(u_texture, UV + vec2(0, +s))
+        + texture(u_texture, UV + vec2(+s, -s))
+        + texture(u_texture, UV + vec2(+s, 0))
+        + texture(u_texture, UV + vec2(+s, +s));
+    
+    // use r component to count alive neighbors
+    if (data.r < 2.0 || data.r > 3.0) // death
+    {
+        fragColor = vec4(0, 0, 0, 1);
+    }
+    else if (data.r == 3.0) // life
+    {
+        fragColor = vec4(1, 1, 1, 1);
+    }
+    else // same color when two neighbors alive
+    {
+        fragColor = texture(u_texture, UV);
+    }
+    // fragColor = 0.99 * texture(u_texture, UV);
+}
+`;
+
+run();
+
+
+function makeTexture(size)
+{
+    texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // const size = 16;
+    const randomPixels = new Uint8Array(size * size * 4);
+    for (let i = 0; i < randomPixels.length; i += 4) 
+    {
+        let v = (Math.random() > 0.5) ? 255 : 0;
+        randomPixels[i + 0] = v; // Red
+        randomPixels[i + 1] = v; // Green
+        randomPixels[i + 2] = v; // Blue
+        /*
+        // totally random colors
+        randomPixels[i + 0] = Math.floor(Math.random() * 256); // Red
+        randomPixels[i + 1] = Math.floor(Math.random() * 256); // Green
+        randomPixels[i + 2] = Math.floor(Math.random() * 256); // Blue
+        */
+        randomPixels[i + 3] = 255; // Alpha
+    }
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, randomPixels);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    // clamp to edge
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    // repeat (wrap around edges)
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+    return texture;
+}
+
+// create a framebuffer that outputs to a texture (not the screen)
+function makeFramebuffer(texture)
+{
+    framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    // attach the texture to the framebuffer object
+    // used for off-screen rendering, post-processing effects, etc.
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+    return framebuffer;
+}
+
+function initialize()
+{
+    // compile shader program(s)
+
+    displayProgram = initProgram(gl, vertexShaderCode, fragmentShaderDisplayCode);
+    computeProgram = initProgram(gl, vertexShaderCode, fragmentShaderComputeCode);
+
+    var vertexPositionLocation = gl.getAttribLocation(displayProgram, "vertexPosition");
+
+    const positions = [1.0, 1.0,   -1.0, 1.0,   1.0, -1.0,   -1.0, -1.0];
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    const numComponents = 2;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.vertexAttribPointer( vertexPositionLocation, numComponents, type, normalize, stride, offset );
+    gl.enableVertexAttribArray( vertexPositionLocation );
+
+    // set up random textures
+    textureArray.push( makeTexture(256) );
+    textureArray.push( makeTexture(256) );
+
+    // set up corresponding framebuffers
+    framebufferArray.push( makeFramebuffer(textureArray[0]) );
+    framebufferArray.push( makeFramebuffer(textureArray[1]) );
+    
+    // program already compiled; set uniform data
+    gl.useProgram(displayProgram); // avoid a warning message
+    uniformTextureDisplayLocation = gl.getUniformLocation(displayProgram, "u_texture");
+    gl.uniform1i(uniformTextureDisplayLocation, 0);
+
+    gl.useProgram(computeProgram); // avoid a warning message
+    uniformTextureComputeLocation = gl.getUniformLocation(computeProgram, "u_texture");
+    gl.uniform1i(uniformTextureComputeLocation, 0);
+
+}
+
+
+function run()
+{
+    // user defined initialization
+    webGLsetup();
+    initialize();
+    loop();
+}
+
+function loop() 
+{
+    // call function on next screen refresh (approx 1/60 sec)
+	// requestAnimationFrame( loop ); 
+    setTimeout(loop, 33);
+    // user defined updates
+    update();
+    render();
+}
+
+function update()
+{
+    index = 1 - index;
+    
+    // framebuffers used to render to texture
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebufferArray[index]);
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    
+    gl.useProgram(computeProgram);
+    
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textureArray[1 - index]);
+    gl.uniform1i(uniformTextureComputeLocation, 0);
+    
+    const drawOffset = 0;
+    const vertexCount = 4;
+    gl.drawArrays(gl.TRIANGLE_STRIP, drawOffset, vertexCount);
+    
+}
+
+function render()
+{   
+    // null: renders to canvas
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(displayProgram);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textureArray[index]);
+    gl.uniform1i(uniformTextureDisplayLocation, 0);
+
+    const drawOffset = 0;
+    const vertexCount = 4;
+    gl.drawArrays(gl.TRIANGLE_STRIP, drawOffset, vertexCount);
+}
+
+function webGLsetup() 
+{
+    const canvas = document.querySelector("#glcanvas");
+    gl = canvas.getContext("webgl2");
+
+    // disable image smoothing - doesn't work
+    // gl.imageSmoothingEnabled = false;
+
+    if (gl == null) 
+    {
+        console.error( "Unable to initialize WebGL 2." );
+        return;
+    }
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+}
+
+function loadShader(gl, type, source) 
+{
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if ( !gl.getShaderParameter(shader, gl.COMPILE_STATUS) ) 
+    {
+        const message = "Shader Error: " + gl.getShaderInfoLog(shader);
+        console.error(message);
+        gl.deleteShader(shader);
+        return null;
+    }
+
+    return shader;
+}
+
+function initProgram(gl, vsSource, fsSource)
+{
+    const vertexShader   = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    if ( !gl.getProgramParameter(program, gl.LINK_STATUS) ) 
+    {
+        const message = "Program Error: " + gl.getProgramInfoLog(program);
+        console.error(message);
+        gl.deleteProgram(program);
+        return null;
+    }
+
+    return program;
+}
+
+
+
+</script>
+
+</html>
