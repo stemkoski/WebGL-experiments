@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>WebGL Demo</title>
+</head>
+
+<body>
+<canvas id="glcanvas" width="512" height="512"></canvas>
+</body>
+
+<script>
+
+// GPU-based rendering
+var vertexShaderCode = `#version 300 es
+in vec2 vertexPosition;
+out vec2 position;
+void main() 
+{
+    gl_Position = vec4(vertexPosition, 0.0, 1.0);
+    position = vertexPosition;
+}
+
+`;
+
+var fragmentShaderCode = `#version 300 es
+precision mediump float;
+in vec2 position;
+out vec4 fragColor;
+void main() 
+{
+    fragColor = vec4(position, 0.0, 1.0);
+}
+`;
+
+run();
+
+// optional: user code
+function initialize()
+{
+   // 
+}
+
+// optional: user code
+function update()
+{
+
+}
+
+// --------- //
+// core code //
+// --------- //
+
+var gl, shaderProgram; 
+
+function run()
+{
+    // user defined initialization
+    initialize();
+    webGLsetup();
+    loop();
+}
+
+function loop() 
+{
+    // call function on next screen refresh (approx 1/60 sec)
+	requestAnimationFrame( loop ); 
+    // user defined updates
+    update();
+    render();
+}
+
+function render()
+{
+    // console.log("rendering...");
+    
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(shaderProgram);
+
+    const drawOffset = 0;
+    const vertexCount = 4;
+    gl.drawArrays(gl.TRIANGLE_STRIP, drawOffset, vertexCount);
+}
+
+function webGLsetup() 
+{
+    const canvas = document.querySelector("#glcanvas");
+    gl = canvas.getContext("webgl2");
+
+    if (gl == null) 
+    {
+        console.error( "Unable to initialize WebGL 2." );
+        return;
+    }
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    shaderProgram = initProgram(gl, vertexShaderCode, fragmentShaderCode);
+
+    var vertexPositionLocation = gl.getAttribLocation(shaderProgram, "vertexPosition");
+
+    const positions = [1.0, 1.0,   -1.0, 1.0,   1.0, -1.0,   -1.0, -1.0];
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    const numComponents = 2;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.vertexAttribPointer( vertexPositionLocation, numComponents, type, normalize, stride, offset );
+    
+    gl.enableVertexAttribArray( vertexPositionLocation );
+}
+
+function loadShader(gl, type, source) 
+{
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if ( !gl.getShaderParameter(shader, gl.COMPILE_STATUS) ) 
+    {
+        const message = "Shader Error: " + gl.getShaderInfoLog(shader);
+        console.error(message);
+        gl.deleteShader(shader);
+        return null;
+    }
+
+    return shader;
+}
+
+function initProgram(gl, vsSource, fsSource)
+{
+    const vertexShader   = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    if ( !gl.getProgramParameter(program, gl.LINK_STATUS) ) 
+    {
+        const message = "Program Error: " + gl.getProgramInfoLog(program);
+        console.error(message);
+        gl.deleteProgram(program);
+        return null;
+    }
+
+    return program;
+}
+
+
+
+</script>
+
+</html>
