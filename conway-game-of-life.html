@@ -14,7 +14,8 @@
 
 <script>
 
-var gl, displayProgram, computeProgram, 
+var gl, canvas, textureWidth = 512, textureHeight = 512, canvasWidth = 1024, canvasHeight = 1024,
+displayProgram, computeProgram, 
 textureArray = [], framebufferArray = [], index = 0, 
 uniformTextureDisplayLocation, uniformTextureComputeLocation; 
 
@@ -50,18 +51,20 @@ out vec4 fragColor;
 
 void main() 
 {
-    float resolution = 256.0;
-    float s = 1.0 / resolution;
+    float textureWidth = ${textureWidth}.0;
+    float textureHeight = ${textureHeight}.0;
+    float w = 1.0 / ${textureWidth}.0;
+    float h = 1.0 / ${textureHeight}.0;
 
     vec4 data = 0.0 
-        + texture(u_texture, UV + vec2(-s, -s))
-        + texture(u_texture, UV + vec2(-s, 0))
-        + texture(u_texture, UV + vec2(-s, +s))
-        + texture(u_texture, UV + vec2(0, -s))
-        + texture(u_texture, UV + vec2(0, +s))
-        + texture(u_texture, UV + vec2(+s, -s))
-        + texture(u_texture, UV + vec2(+s, 0))
-        + texture(u_texture, UV + vec2(+s, +s));
+        + texture(u_texture, UV + vec2(-w, -h))
+        + texture(u_texture, UV + vec2(-w, 0))
+        + texture(u_texture, UV + vec2(-w, +h))
+        + texture(u_texture, UV + vec2(0, -h))
+        + texture(u_texture, UV + vec2(0, +h))
+        + texture(u_texture, UV + vec2(+w, -h))
+        + texture(u_texture, UV + vec2(+w, 0))
+        + texture(u_texture, UV + vec2(+w, +h));
     
     // use r component to count alive neighbors
     if (data.r < 2.0 || data.r > 3.0) // death
@@ -83,13 +86,12 @@ void main()
 run();
 
 
-function makeTexture(size)
+function makeTexture(width, height)
 {
     texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
-    // const size = 16;
-    const randomPixels = new Uint8Array(size * size * 4);
+    const randomPixels = new Uint8Array(width * height * 4);
     for (let i = 0; i < randomPixels.length; i += 4) 
     {
         let v = (Math.random() > 0.5) ? 255 : 0;
@@ -105,7 +107,7 @@ function makeTexture(size)
         randomPixels[i + 3] = 255; // Alpha
     }
 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, randomPixels);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, randomPixels);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     // clamp to edge
@@ -153,8 +155,8 @@ function initialize()
     gl.enableVertexAttribArray( vertexPositionLocation );
 
     // set up random textures
-    textureArray.push( makeTexture(256) );
-    textureArray.push( makeTexture(256) );
+    textureArray.push( makeTexture(textureWidth, textureHeight) );
+    textureArray.push( makeTexture(textureWidth, textureHeight) );
 
     // set up corresponding framebuffers
     framebufferArray.push( makeFramebuffer(textureArray[0]) );
@@ -231,11 +233,12 @@ function render()
 
 function webGLsetup() 
 {
-    const canvas = document.querySelector("#glcanvas");
-    gl = canvas.getContext("webgl2");
+    canvas = document.querySelector("#glcanvas");
+    canvas.width = textureWidth;
+    canvas.height = textureHeight;
+    canvas.style = `width: ${canvasWidth}; height: ${canvasHeight}px; image-rendering: pixelated;`
 
-    // disable image smoothing - doesn't work
-    // gl.imageSmoothingEnabled = false;
+    gl = canvas.getContext("webgl2");
 
     if (gl == null) 
     {
