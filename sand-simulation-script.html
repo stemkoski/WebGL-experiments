@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>WebGL Demo</title>
+</head>
+
+<body>
+<canvas id="glcanvas" width="512" height="512"></canvas>
+</body>
+
+<script>
+
+var canvas, gl, world,
+worldWidth = textureWidth = 200,  
+worldHeight = textureHeight = 200, 
+canvasWidth = 800, canvasHeight = 800,
+pixelData, texture, shaderProgram; 
+
+
+const SMOKE = 0,   AIR = 1,  FIRE = 2,   OIL = 3, WATER = 4, 
+       LAVA = 5, PLANT = 6,  SAND = 7, STONE = 8, RIGID = 9;
+
+var selectedType = SAND;
+
+var colorArray = [];
+colorArray[SMOKE] = [200, 200, 200, 255]; 
+colorArray[AIR]   = [ 20,  20,  20, 255]; 
+colorArray[FIRE]  = [235,  20,  20, 255];
+colorArray[OIL]   = [200,  20, 235, 255]; 
+colorArray[WATER] = [ 20,  20, 235, 255];
+colorArray[LAVA]  = [235, 128,  20, 255]; 
+colorArray[PLANT] = [ 20, 200,  20, 255];
+colorArray[SAND]  = [235, 235,  20, 255]; 
+colorArray[STONE] = [150, 150, 150, 255];
+colorArray[RIGID] = [ 99,  99,  99, 255];
+
+
+// ????????
+const offsetsArray = [
+    [ [0,1] ]
+]
+
+// GPU-based rendering
+var vertexShaderCode = `#version 300 es
+in vec2 vertexPosition;
+out vec2 UV;
+
+void main() {
+    UV = vertexPosition * 0.5 + 0.5;
+    gl_Position = vec4(vertexPosition, 0.0, 1.0);
+}
+`;
+
+var fragmentShaderCode = `#version 300 es
+precision mediump float;
+in vec2 UV;
+uniform sampler2D u_texture;
+out vec4 fragColor;
+
+void main() 
+{
+    fragColor = texture(u_texture, UV);
+}
+`;
+
+run();
+
+// optional: user code
+function initialize()
+{
+    initializeTexture();
+    initializeWorld();
+    convertWorldDataToPixelData();
+    sendPixelDataToTexture();
+}
+
+// call after shader program initialized
+function initializeTexture()
+{
+    // set up random texture
+    texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    if (!pixelData)
+        pixelData = new Uint8Array(textureWidth * textureHeight * 4);
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, textureWidth, textureHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    // program already compiled; set uniform data
+    gl.useProgram(shaderProgram); // avoid a warning message
+    const uTextureLocation = gl.getUniformLocation(shaderProgram, "u_texture");
+    gl.uniform1i(uTextureLocation, 0); // only one texture, uses slot 0
+}
+
+function initializeWorld()
+{
+    // remember! y-by-x = rows-by-columns = height-by-width
+    // specification: 
+    //  hundreds digit: 0 for not (yet) moved, 1 for moved
+    //      tens digit: stores particle element type
+    //      ones digit: random except for AIR and RIGID type
+    world = [];
+    for (let y = 0; y < worldHeight; y++)
+    {
+        world.push( new Array(worldWidth).fill(10*AIR) );
+    }
+    world[2][4] = 10*SAND;
+    world[3][4] = 10*SAND;
+    world[4][4] = 10*SAND;
+    world[5][4] = 10*SAND;
+
+    // use rigid layer at bottom to catch materials?
+    for (let x = 0; x < worldWidth; x++)
+        world[worldHeight-1][x] = 10*RIGID;
+
+    world[worldHeight-2][0] = 10*RIGID;
+    world[worldHeight-2][worldWidth-1] = 10*RIGID;
+    
+    // add randomness to non-AIR, non-RIGID particles
+    for (let y = 0; y < worldHeight; y++)
+    {
+        for (let x = 0; x < worldWidth; x++)
+        {
+            particleType = world[y][x] / 10 | 0;
+            if (particleType != AIR && particleType != RIGID)
+                world[y][x] += Math.floor( 10 * Math.random() );
+        }       
+    }
+
+    
+}
+
+function updateWorld()
+{
+    // reset all 100s digits to 0, to indicate able to move 
+    for (let y = 0; y < worldHeight; y++)
+    {
+        for (let x = 0; x < worldWidth; x++)
+        {
+            world[y][x] = world[y][x] % 100;
+        }       
+    }
+
+    // note: bottom-up order is really important
+    // move(swap) things that can move
+    // TODO: figure out the "climbing" problem (eg continuously drop STONE on edge of SAND pile)
+    // TODO: water ripple across surface problem
+    for (let y = worldHeight - 1; y >= 0; y--)
+    {
+        for (let x = 0; x < worldWidth; x++)
+        {
+            let s = 2 * Math.floor(2 * Math.random()) - 1; // is either +1 or -1
+            if ( canSwapVert(x,y, 0,1) )
+                doSwap(x,y, 0,1);
+            else if ( canSwapDiag(x,y, -s,1) )
+                doSwap(x,y, -s,1);
+            else if ( canSwapDiag(x,y, +s,1) )
+                doSwap(x,y, +s,1);
+            else if ( canSwapHoriz(x,y, -s,0) )
+                doSwap(x,y, -s,0);
+            else if ( canSwapHoriz(x,y, +s,0) )
+                doSwap(x,y, +s,0);
+        }       
+    }
+}
+
+// reuse these variables to avoid constant reinitializing / garbage collection
+var otherX = 0, otherY = 0, value = 0, offsetValue = 0, 
+ particleType = 0, otherParticleType = 0;
+
+function canSwapGeneral( pointX, pointY, offsetX, offsetY )
+{
+    // these global values are used by the other "canSwap" functions below
+    otherX = pointX + offsetX;
+    otherY = pointY + offsetY;
+    // since RIGID = 9, particlevalue >= 90 indicates is either 
+    //   RIGID or already moved (hundreds digit 1)
+    return (pointX >= 0) && (pointX < worldWidth)
+        && (pointY >= 0) && (pointY < worldHeight)
+        && (otherX >= 0) && (otherX < worldWidth)
+        && (otherY >= 0) && (otherY < worldHeight)
+        && (world[pointY][pointX] < 90)
+        && (world[otherY][otherX] < 90);
+}
+
+function canSwapVert( pointX, pointY, offsetX, offsetY )
+{
+    otherX = pointX + offsetX;
+    otherY = pointY + offsetY;
+    // no need to % by 100 to get tens digit 
+    //    since canSwapGeneral == true implies the value is < 100.
+
+    // requires: this particle is heavier/denser than the other particle directly below it
+    return canSwapGeneral(pointX, pointY, offsetX, offsetY)
+        && ((world[pointY][pointX] / 10 | 0) > (world[otherY][otherX] / 10 | 0));
+}
+
+function canSwapDiag( pointX, pointY, offsetX, offsetY )
+{
+    otherX = pointX + offsetX;
+    otherY = pointY + offsetY;
+    // requires: there is no particle to the side of this particle that would fall down
+    // *and* this particle is heavier/denser than the other particle diagonally below it
+    return canSwapGeneral(pointX, pointY, offsetX, offsetY)
+        && !canSwapVert(pointX+offsetX, pointY, 0, 1)
+        && ((world[pointY][pointX] / 10 | 0) > (world[otherY][otherX] / 10 | 0));
+}
+
+function canSwapHoriz( pointX, pointY, offsetX, offsetY )
+{
+    otherX = pointX + offsetX;
+    otherY = pointY + offsetY;
+
+    if ( canSwapGeneral(pointX, pointY, offsetX, offsetY) )
+    {
+        particleType      = world[pointY][pointX] / 10 | 0;
+        otherParticleType = world[otherY][otherX] / 10 | 0;
+
+        // only liquids move horizontally, displacing only gases
+        return (particleType == WATER || particleType == OIL || particleType == LAVA)
+            && (otherParticleType == AIR || particleType == SMOKE || particleType == FIRE)
+            && !canSwapVert(pointX+offsetX, pointY-1, 0, 1);
+    }
+    else
+        return false;
+
+    /*
+
+    TODO: fails when index out of bounds. rethink.
+    particleType      = world[pointY][pointX] / 10 | 0;
+    otherParticleType = world[otherY][otherX] / 10 | 0;
+
+    // only liquids move horizontally, displacing only gases
+    return (particleType == WATER || particleType == OIL || particleType == LAVA)
+        && (otherParticleType == AIR || particleType == SMOKE || particleType == FIRE)
+        && canSwapGeneral(pointX, pointY, offsetX, offsetY)
+        && !canSwapVert(pointX+offsetX, pointY, 0, 1);
+    */
+}
+
+function doSwap( pointX, pointY, offsetX, offsetY )
+{
+    otherX = pointX + offsetX;
+    otherY = pointY + offsetY;
+    value = world[pointY][pointX];
+    world[pointY][pointX] = world[otherY][otherX];
+    world[otherY][otherX] = value;
+
+    // AIR can move again, but nothing else can (+100 to everything else)
+    if ( (world[pointY][pointX] / 10 | 0) != AIR )
+        world[pointY][pointX] = world[pointY][pointX] + 100;
+    if ( (world[otherY][otherX] / 10 | 0) != AIR )
+        world[otherY][otherX] = world[otherY][otherX] + 100;
+
+    
+}
+
+function convertWorldDataToPixelData()
+{
+    i = 0;
+    for (let y = worldHeight - 1; y >= 0; y--)
+    {
+        for (let x = 0; x < worldWidth; x++)
+        {
+            // get the tens digit
+            particleType = ((world[y][x] % 100) / 10) | 0;
+            // get the ones digit, shift from [0,9] to [-5,4] to [-20,16]
+            //   and use to offset color
+            offsetValue = 4 * ((world[y][x] % 10) - 5);
+            // also get the ones digit to offset colors by +/- 10
+            pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
+            pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
+            pixelData[i + 2] = colorArray[ particleType ][2] + offsetValue; // Blue
+            pixelData[i + 3] = colorArray[ particleType ][3]; // Alpha
+            i += 4;
+        }
+        // console.log(i)
+    }
+    /*
+    // temporary stuff
+    for (let i = 0; i < pixelData.length; i += 4) 
+    {
+        pixelData[i + 0] = Math.floor(Math.random() * 256); // Red
+        pixelData[i + 1] = Math.floor(Math.random() * 256); // Green
+        pixelData[i + 2] = Math.floor(Math.random() * 256); // Blue
+        pixelData[i + 3] = 255; // Alpha
+    }
+    */
+}
+
+function sendPixelDataToTexture()
+{
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, textureWidth, textureHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
+}
+
+// optional: user code
+function update()
+{
+    console.log("updating")
+
+    if (mouseDown)
+    {
+        //particleType = SAND;
+        world[mousePixelY][mousePixelX] = 10*selectedType;
+        if (selectedType != AIR && selectedType != RIGID)
+            world[mousePixelY][mousePixelX] += Math.floor( 10 * Math.random() );
+    }
+    updateWorld();
+    convertWorldDataToPixelData();
+    sendPixelDataToTexture();
+}
+
+// --------- //
+// core code //
+// --------- //
+
+function run()
+{
+    // user defined initialization
+    webGLsetup();
+    initialize();
+    loop();
+}
+
+function loop() 
+{
+    // call function on next screen refresh (approx 1/60 sec)
+	requestAnimationFrame( loop );
+    // control update rate
+    // setTimeout( loop, 100 ); 
+    // user defined updates
+    update();
+    render();
+}
+
+function render()
+{
+    // console.log("rendering...");
+    
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(shaderProgram);
+
+    const drawOffset = 0;
+    const vertexCount = 4;
+    gl.drawArrays(gl.TRIANGLE_STRIP, drawOffset, vertexCount);
+}
+
+var mouseDown = false, mousePixelX = 0, mousePixelY = 0;
+function onMouseDown(event)
+{
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    // console.log("down @ " + x + "  " + y)
+    mousePixelX = (x / (canvasWidth/worldWidth)) | 0;
+    mousePixelY = (y / (canvasHeight/worldHeight)) | 0;
+    // console.log("pixels " + px + " " + py)
+
+    mouseDown = true;
+    
+}
+
+function onMouseMove(event)
+{
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    mousePixelX = (x / (canvasWidth/worldWidth)) | 0;
+    mousePixelY = (y / (canvasHeight/worldHeight)) | 0;
+}
+
+function onMouseUp(event)
+{
+    mouseDown = false;
+}
+
+function onKeyDown(event)
+{
+    if (event.keyCode >= 48 && event.keyCode <= 57)
+        selectedType = event.keyCode - 48;
+}
+
+function webGLsetup() 
+{
+    canvas = document.querySelector("#glcanvas");
+    canvas.width = textureWidth;
+    canvas.height = textureHeight;
+    canvas.style = `width: ${canvasWidth}; height: ${canvasHeight}px; image-rendering: pixelated;`
+
+    canvas.addEventListener("mousedown",  onMouseDown);
+    canvas.addEventListener("mousemove",  onMouseMove);
+    canvas.addEventListener("mouseup",    onMouseUp);
+    canvas.addEventListener("mouseleave", onMouseUp);
+    document.addEventListener("keydown", onKeyDown);
+    
+    gl = canvas.getContext("webgl2");
+
+    if (gl == null) 
+    {
+        console.error( "Unable to initialize WebGL 2." );
+        return;
+    }
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    shaderProgram = initProgram(gl, vertexShaderCode, fragmentShaderCode);
+
+    var vertexPositionLocation = gl.getAttribLocation(shaderProgram, "vertexPosition");
+
+    const positions = [1.0, 1.0,   -1.0, 1.0,   1.0, -1.0,   -1.0, -1.0];
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    const numComponents = 2;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.vertexAttribPointer( vertexPositionLocation, numComponents, type, normalize, stride, offset );
+    
+    gl.enableVertexAttribArray( vertexPositionLocation );
+}
+
+function loadShader(gl, shaderType, source) 
+{
+    const shader = gl.createShader(shaderType);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if ( !gl.getShaderParameter(shader, gl.COMPILE_STATUS) ) 
+    {
+        const message = "Shader Error: " + gl.getShaderInfoLog(shader);
+        console.error(message);
+        gl.deleteShader(shader);
+        return null;
+    }
+
+    return shader;
+}
+
+function initProgram(gl, vsSource, fsSource)
+{
+    const vertexShader   = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    if ( !gl.getProgramParameter(program, gl.LINK_STATUS) ) 
+    {
+        const message = "Program Error: " + gl.getProgramInfoLog(program);
+        console.error(message);
+        gl.deleteProgram(program);
+        return null;
+    }
+
+    return program;
+}
+
+
+
+</script>
+
+</html>
