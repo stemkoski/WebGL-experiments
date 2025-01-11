@@ -246,6 +246,7 @@ function updateWorld()
         for (let x = 0; x < worldWidth; x++)
             clearMoved(x,y);
 
+    // use to randomize order in which particles are processed
     shuffleArray(xCoord);
     shuffleArray(yCoord);
 
@@ -256,9 +257,9 @@ function updateWorld()
     for (let y = worldHeight - 1; y >= 0; y--)
     {
         // y = yCoord[j]; // seems to look better but exacerbates "particles fall up" issue
-        for (let i = 0; i < worldWidth; i++)
+        for (let x = 0; x < worldWidth; x++)
         {
-            x = xCoord[i];
+            // x = xCoord[i]; // doesn't seem to make a difference?
             let s = 2 * Math.floor(2 * Math.random()) - 1; // is either +1 or -1
             if ( canSwapVert(x,y, 0,1) )
                 doSwap(x,y, 0,1);
