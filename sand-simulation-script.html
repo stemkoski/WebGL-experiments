@@ -4,22 +4,61 @@
 <head>
     <meta charset="utf-8" />
     <title>WebGL Demo</title>
+    <style>
+        button
+        {
+            width:120px;
+            margin: 8px;
+            padding: 8px;
+            border: 2px solid black;
+            background-color: lightblue;
+            font-size: 20px;
+            font-weight: bold;
+            color: black;
+            text-shadow: 1px 1px 2px rgba(0,0,0, 0.5);
+            -xxwebkit-text-stroke-width: 1px;
+            -xwebkit-text-stroke-color: black;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 
 <body>
-<canvas id="glcanvas" width="512" height="512"></canvas>
+
+<table>
+    <tr>
+        <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
+        <td>
+            <button id="slowestButton">Slowest</button> <br>
+            <button id="slowButton">Slow</button> <br>
+            <button id="fastButton">Fast</button> <br>
+            <button id="fastestButton">Fastest</button>
+        </td>
+    </tr>
+</table>
+
+
 </body>
 
 <script>
 
 var canvas, gl, world,
-worldWidth = textureWidth = 40,  
-worldHeight = textureHeight = 40, 
+worldWidth = textureWidth = 200,  
+worldHeight = textureHeight = 200, 
 canvasWidth = 800, canvasHeight = 800,
 pixelData, texture, shaderProgram,
 currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTicker = 0; 
 
 var go = false;
+
+var loopSpeed = 16;
+// 16 elements
+// 4 speeds, pause, reset
+// TODO: draw speed separate from world update speed!
+document.getElementById("slowestButton").addEventListener("click", () => { loopSpeed = 1000 } );
+document.getElementById("slowButton").addEventListener("click", () => { loopSpeed = 100 } );
+document.getElementById("fastButton").addEventListener("click", () => { loopSpeed = 16 } );
+document.getElementById("fastestButton").addEventListener("click", () => { loopSpeed = 1 } );
 
 /**
  *   Each point in the world is represented by a number;
@@ -48,9 +87,8 @@ const TYPE_BITS = [0,1,2,3], RANDOM_BITS = [4,5,6,7],
 const SMOKE = 0,   AIR = 1,  FIRE = 2,   OIL = 3, WATER = 4, 
        LAVA = 5, PLANT = 6,  SAND = 7, STONE = 8, RIGID = 9;
 
-// TODO: rename RIGID -> WALL. Later add WOOD (brown), FUNGI (pink), ICE (solid, light blue, FIRE+ICE = AIR+WATER, LAVA+ICE=STONE+WATER), ACID (light green, dissolves everything?)
-
 var selectedType = SAND;
+// TODO: rename RIGID -> WALL. Later add WOOD (brown), FUNGI (pink), ICE (solid, light blue, FIRE+ICE = AIR+WATER, LAVA+ICE=STONE+WATER), ACID (light green, dissolves everything?)
 
 var colorArray = [];
 colorArray[SMOKE] = [200, 200, 200, 255]; // white
@@ -137,10 +175,6 @@ function couldMove(x,y) { return isValid(x,y) && !isMoved(x,y) && !isRigid(x,y);
 function initializeWorld()
 {
     // remember! y-by-x = rows-by-columns = height-by-width
-    // specification: 
-    //  hundreds digit: 0 for not (yet) moved, 1 for moved
-    //      tens digit: stores particle element type
-    //      ones digit: random except for AIR and RIGID type
     world = [];
     for (let y = 0; y < worldHeight; y++)
         world.push( new Array(worldWidth).fill(0) );
@@ -178,6 +212,17 @@ function shuffleArray(array)
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
+}
+
+function arraysEqual(a, b) 
+{
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++)
+    {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
 }
 
 // ????????
@@ -256,6 +301,11 @@ function findDisplacementPath( p, path )
     if ( getType( p[0], p[1] ) == AIR )
         return path;
 
+    if ( path.length > 1 && arraysEqual(path[0], p) )
+    {
+        path.pop();
+        return path;
+    }
     // directions for point (p) to explore moving into (q):
     
     // down
@@ -308,11 +358,47 @@ function findDisplacementPath( p, path )
                 return result;
         }
     }
-    // liquids can flow up if pushed
+    
+    /*
+    // liquids can exchange horizontal positions with other liquids
+    if ( isLiquid(p[0],p[1]) )
+    {
+        // to the side
+        q = [ p[0]+s, p[1] ]
+        // if ( couldMove(q[0],q[1]) && getType(p[0],p[1]) > getType(q[0],q[1]) )
+        if ( couldMove(q[0],q[1]) && !isSolid(q[0],q[1]) && (getType(p[0],p[1]) > getType(q[0],q[1]) || arraysEqual(q, path[0]) ) )
+        {
+            result = findDisplacementPath( q, path );
+            if ( result != null )
+                return result;
+        }
+
+        // to the other side
+        q = [ p[0]-s, p[1] ]
+        // if ( couldMove(q[0],q[1]) && getType(p[0],p[1]) > getType(q[0],q[1]) )
+        if ( couldMove(q[0],q[1]) && !isSolid(q[0],q[1]) && (getType(p[0],p[1]) > getType(q[0],q[1]) || arraysEqual(q, path[0]) ) )
+        {
+            result = findDisplacementPath( q, path );
+            if ( result != null )
+                return result;
+        }
+    }
+        */
+    
+
+    // liquids can flow up if pushed, into a spot with less density, or into the first spot on the path
     if ( isLiquid(p[0],p[1]) && path.length > 1 )
     {
+        q = [ p[0], p[1]-1 ]
+        if ( couldMove(q[0],q[1]) && (getType(p[0],p[1]) > getType(q[0],q[1]) || arraysEqual(q, path[0]) )  )
+        {
+            result = findDisplacementPath( q, path );
+            if ( result != null )
+                return result;
+        }
+
         q = [ p[0]+s, p[1]-1 ]
-        if ( couldMove(q[0],q[1]) && getType(p[0],p[1]) > getType(q[0],q[1]) )
+        if ( couldMove(q[0],q[1]) && (getType(p[0],p[1]) > getType(q[0],q[1]) || arraysEqual(q, path[0]) )  )
         {
             result = findDisplacementPath( q, path );
             if ( result != null )
@@ -320,20 +406,15 @@ function findDisplacementPath( p, path )
         }
 
         q = [ p[0]-s, p[1]-1 ]
-        if ( couldMove(q[0],q[1]) && getType(p[0],p[1]) > getType(q[0],q[1]) )
+        if ( couldMove(q[0],q[1]) && (getType(p[0],p[1]) > getType(q[0],q[1]) || arraysEqual(q, path[0]) )  )
         {
             result = findDisplacementPath( q, path );
             if ( result != null )
                 return result;
         }
+                
 
-        q = [ p[0], p[1]-1 ]
-        if ( couldMove(q[0],q[1]) && getType(p[0],p[1]) > getType(q[0],q[1]) )
-        {
-            result = findDisplacementPath( q, path );
-            if ( result != null )
-                return result;
-        }
+        
                 
     }
     // all of the previous path checks failed?
@@ -356,15 +437,19 @@ function updateWorld()
     // move(swap) things that can move
     // TODO: figure out the "climbing" problem (eg continuously drop STONE on edge of SAND pile)
     // TODO: water ripple across surface problem
-    for (let y = worldHeight - 1; y >= 0; y--)
+    for (let j = worldHeight - 1; j >= 0; j--)
     {
-        // y = yCoord[j]; // seems to look better but exacerbates "particles fall up" issue
+        y = j // yCoord[j]; // seems to look better but exacerbates "particles fall up" issue
         for (let i = 0; i < worldWidth; i++)
         {
             x = xCoord[i];
 
             // things that can't move or have already moved are skipped.
             if ( !couldMove(x,y) )
+                continue;
+
+            // air doesn't do anything.
+            if ( getType(x,y) == AIR )
                 continue;
 
             pointCoords = findDisplacementPath( [x,y], null );
@@ -381,13 +466,34 @@ function updateWorld()
             for (let i = 0; i < L; i++)
                 setParticleFromValue(pointCoords[(i+1)%L][0], pointCoords[(i+1)%L][1], pointValues[i]);
 
+                
             // particles that are not gases can not move again
             for (let i = 0; i < L; i++)
                 if ( !isGas(pointCoords[i][0], pointCoords[i][1]) )
                     setMoved(pointCoords[i][0], pointCoords[i][1]);
+            
               
         }       
     }
+
+    /*
+    // horizontal liquid mixing
+    for (let y = worldHeight - 1; y >= 0; y--)
+    {
+        for (let x = 0; x < worldWidth - (tick%2); x++)
+        {
+            p = [ 2*x + (tick%2), y ]
+            q = [ 2*x + (tick%2) + 1, y ]
+            if ( isLiquid(p[0],p[1]) && isLiquid(q[0],q[1]) && getType(p[0],p[1]) != getType(q[0],q[1]) )
+            {
+                temp1 = getParticle(p[0],p[1])
+                temp2 = getParticle(q[0],q[1])
+                setParticleFromValue(p[0],p[1],temp2)
+                setParticleFromValue(q[0],q[1],temp1)
+            }
+        }
+    }
+    */
 }
 
 
@@ -448,12 +554,12 @@ function update()
         fpsTicker = 0;
     }
 
-    r = 0;
+    r = 3;
     // TODO: add a disk of particles, function of radius
     if (mouseDown)
-        for (let dx = -r; dx <= r; dx++)
-            for (let dy = -r; dy <= r; dy++)
-                if ( distance(mousePixelX, mousePixelY, mousePixelX + dx, mousePixelY + dy ) <= r )
+        for (let dx = 0; dx <= r; dx++)
+            for (let dy = 0; dy <= r; dy++)
+                // if ( distance(mousePixelX, mousePixelY, mousePixelX + dx, mousePixelY + dy ) <= r )
                     setParticleFromType( mousePixelX + dx, mousePixelY + dy, selectedType );
 
     updateWorld();
@@ -483,7 +589,7 @@ function loop()
     // call function on next screen refresh (typically approx 1/60 sec)
 	// requestAnimationFrame( loop );
     // control update rate - can attain speed beyond refresh rate ?!
-    setTimeout( loop, 100 ); 
+    setTimeout( loop, loopSpeed ); 
     // user defined updates
     update();
     render();
@@ -544,7 +650,11 @@ function webGLsetup()
     canvas.addEventListener("mousemove",  onMouseMove);
     canvas.addEventListener("mouseup",    onMouseUp);
     canvas.addEventListener("mouseleave", onMouseUp);
-    document.addEventListener("keydown", onKeyDown);
+    canvas.addEventListener("touchstart", onMouseDown);
+    canvas.addEventListener("touchmove",  onMouseMove);
+    canvas.addEventListener("touchend",   onMouseUp);
+
+    document.addEventListener("keydown",  onKeyDown);
     
     gl = canvas.getContext("webgl2");
 

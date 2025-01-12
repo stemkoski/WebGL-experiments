@@ -4,10 +4,37 @@
 <head>
     <meta charset="utf-8" />
     <title>WebGL Demo</title>
+    <style>
+        button
+        {
+            width:120px;
+            margin: 8px;
+            padding: 8px;
+            border: 2px solid black;
+            background-color: lightblue;
+            font-size: 20px;
+            font-weight: bold;
+            color: black;
+            text-shadow: 1px 1px 2px rgba(0,0,0, 0.5);
+            -xxwebkit-text-stroke-width: 1px;
+            -xwebkit-text-stroke-color: black;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 
 <body>
-<canvas id="glcanvas" width="512" height="512"></canvas>
+<table>
+    <tr>
+        <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
+        <td>
+            <button id="slowestButton">Slowest</button> <br>
+            <button id="slowButton">Slow</button> <br>
+            <button id="fastButton">Fast</button> <br>
+            <button id="fastestButton">Fastest</button>
+        </td>
+    </tr>
+</table>
 </body>
 
 <script>
@@ -19,7 +46,14 @@ canvasWidth = 800, canvasHeight = 800,
 pixelData, texture, shaderProgram,
 currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTicker = 0; 
 
-
+var loopSpeed = 16;
+// 16 elements
+// 4 speeds, pause, reset
+// TODO: draw speed separate from world update speed!
+document.getElementById("slowestButton").addEventListener("click", () => { loopSpeed = 1000 } );
+document.getElementById("slowButton").addEventListener("click", () => { loopSpeed = 100 } );
+document.getElementById("fastButton").addEventListener("click", () => { loopSpeed = 16 } );
+document.getElementById("fastestButton").addEventListener("click", () => { loopSpeed = 1 } );
 
 /**
  *   Each point in the world is represented by a number;
@@ -129,6 +163,11 @@ function setParticleFromType( x,y, t )
 function setParticleFromValue(x,y, v) { world[y][x] = v; }
 function getParticle(x,y) { return world[y][x]; }
 
+// check if coordinates are within world range
+function isValid(x,y) { return (0 <= x) && (x < worldWidth) && (0 <= y) && (y < worldHeight); }
+
+function couldMove(x,y) { return isValid(x,y) && !isMoved(x,y) && !isRigid(x,y); }
+
 function initializeWorld()
 {
     // remember! y-by-x = rows-by-columns = height-by-width
@@ -174,11 +213,6 @@ function shuffleArray(array)
         [array[i], array[j]] = [array[j], array[i]];
     }
 }
-
-// ????????
-const offsetsArray = [
-    [ [0,1] ]
-]
 
 // GPU-based rendering
 var vertexShaderCode = `#version 300 es
@@ -253,23 +287,33 @@ function updateWorld()
     // note: bottom-up order is really important
     // move(swap) things that can move
     // TODO: figure out the "climbing" problem (eg continuously drop STONE on edge of SAND pile)
+    //   partial solution below but requires limiting spawn to 1/2 pixel wide
     // TODO: water ripple across surface problem
     for (let y = worldHeight - 1; y >= 0; y--)
     {
         // y = yCoord[j]; // seems to look better but exacerbates "particles fall up" issue
-        for (let x = 0; x < worldWidth; x++)
+        for (let i = 0; i < worldWidth; i++)
         {
-            // x = xCoord[i]; // doesn't seem to make a difference?
+            x = xCoord[i]; // makes a difference?
+
+            // things that can't move or have already moved are skipped.
+            if ( !couldMove(x,y) )
+                continue;
+
+            // air doesn't do anything -- but it pushes up SMOKE (lighter than air elements)
+            //if ( getType(x,y) == AIR )
+            //    continue;
+
             let s = 2 * Math.floor(2 * Math.random()) - 1; // is either +1 or -1
-            if ( canSwapVert(x,y, 0,1) )
+            if ( canSwapVert(x,y, x,y+1) )
                 doSwap(x,y, 0,1);
-            else if ( canSwapDiag(x,y, -s,1) )
+            else if ( canSwapDiag(x,y, x-s,y+1) )
                 doSwap(x,y, -s,1);
-            else if ( canSwapDiag(x,y, +s,1) )
+            else if ( canSwapDiag(x,y, x+s,y+1) )
                 doSwap(x,y, +s,1);
-            else if ( canSwapHoriz(x,y, -s,0) )
+            else if ( canSwapHoriz(x,y, x-s,y) )
                 doSwap(x,y, -s,0);
-            else if ( canSwapHoriz(x,y, +s,0) )
+            else if ( canSwapHoriz(x,y, x+s,y) )
                 doSwap(x,y, +s,0);
         }       
     }
@@ -279,46 +323,34 @@ function updateWorld()
 var otherX = 0, otherY = 0, value = 0, offsetValue = 0, 
  particleType = 0, otherParticleType = 0;
 
-function canSwapGeneral( pointX, pointY, offsetX, offsetY )
+function canSwapVert( px, py, qx, qy )
 {
-    otherX = pointX + offsetX;
-    otherY = pointY + offsetY;
-
-    return (pointX >= 0) && (pointX < worldWidth)
-        && (pointY >= 0) && (pointY < worldHeight)
-        && (otherX >= 0) && (otherX < worldWidth)
-        && (otherY >= 0) && (otherY < worldHeight)
-        && (!isMoved(pointX,pointY) && !isRigid(pointX,pointY)) 
-        && (!isMoved(otherX,otherY) && !isRigid(otherX,otherY));
-}
-
-function canSwapVert( pointX, pointY, offsetX, offsetY )
-{
-    // no need to % by 100 to get tens digit 
-    //    since canSwapGeneral == true implies the value is < 100.
-
     // requires: this particle type is heavier/denser than the other particle directly below it
-    return canSwapGeneral(pointX, pointY, offsetX, offsetY)
-        && (getType(pointX, pointY) > getType(pointX + offsetX, pointY + offsetY));
+     /// AND the particle directly below is less dense than the ones on the diag below
+     // (b/c if the diag areas are empty, they provide less resistance and the main particle would fall to the side instead)
+     // TODO: AND don't let solids pass through other solids...
+    return couldMove(qx,qy)
+        && ( getType(px,py) > getType(qx,qy) )
+        && ( getType(qx,qy) <= getType(qx+1,qy) )
+        && ( getType(qx,qy) <= getType(qx-1,qy) );
 }
 
-function canSwapDiag( pointX, pointY, offsetX, offsetY )
+function canSwapDiag( px, py, qx, qy )
 {
     // requires: there is no particle to the side of this particle that would fall down
     // *and* this particle is heavier/denser than the other particle diagonally below it
-    return canSwapGeneral(pointX, pointY, offsetX, offsetY)
-        && !canSwapVert(pointX + offsetX, pointY, 0, 1)
-        && (getType(pointX, pointY) > getType(pointX + offsetX, pointY + offsetY));
+    return couldMove(qx,qy)
+        && !canSwapVert(qx,qy-1, qx,qy)
+        && (getType(px,py) > getType(qx,qy));
 }
 
-function canSwapHoriz( pointX, pointY, offsetX, offsetY )
+function canSwapHoriz( px, py, qx, qy )
 {
-
-    // only liquids move horizontally, displacing only other liquids/gases
-    return canSwapGeneral(pointX, pointY, offsetX, offsetY)
-        && isLiquid(pointX, pointY)
-        && (getType(pointX, pointY) > getType(pointX + offsetX, pointY + offsetY))
-        && !canSwapVert(pointX+offsetX, pointY-1, 0, 1);
+    // only liquids (non-solids) move horizontally, displacing only other liquids/gases
+    return couldMove(qx,qy)
+        && !isSolid(px,py)
+        && (getType(px,py) > getType(qx,qy))
+        && !canSwapVert(qx,qy-1, qx,qy);
 }
     /*
 
@@ -329,13 +361,11 @@ function canSwapHoriz( pointX, pointY, offsetX, offsetY )
 
 function doSwap( pointX, pointY, offsetX, offsetY )
 {
-    otherX = pointX + offsetX;
-    otherY = pointY + offsetY;
     value = getParticle(pointX, pointY);
     setParticleFromValue(pointX, pointY, getParticle(pointX + offsetX, pointY + offsetY));
     setParticleFromValue(pointX + offsetX, pointY + offsetY, value);
-
-    // AIR can move again, but nothing else can (+100 to everything else)
+0
+    // AIR can move again, but nothing else can
     if ( getType(pointX, pointY) != AIR )
         setMoved(pointX, pointY);
     if ( getType(pointX + offsetX, pointY + offsetY) != AIR )
@@ -351,10 +381,9 @@ function convertWorldDataToPixelData()
     {
         for (let x = 0; x < worldWidth; x++)
         {
-            // get the tens digit
+
             particleType = getType(x,y);
-            // get the ones digit, shift from [0,10] to [-5,5] to [-20,20]
-            //   and use to offset RGB color values
+
             offsetValue = 4 * (getRandom(x,y) - 5);
             pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
             pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
@@ -391,11 +420,11 @@ function update()
         fpsTicker = 0;
     }
 
-    r = 1;
+    r = 2;
     // TODO: add a disk of particles, function of radius
     if (mouseDown)
-        for (let dx = -r; dx <= r; dx++)
-            for (let dy = -r; dy <= r; dy++)
+        for (let dx = 0; dx < r; dx++)
+            for (let dy = 0; dy < r; dy++)
                 if ( distance(mousePixelX, mousePixelY, mousePixelX + dx, mousePixelY + dy ) <= r )
                     setParticleFromType( mousePixelX + dx, mousePixelY + dy, selectedType );
 
@@ -426,7 +455,7 @@ function loop()
     // call function on next screen refresh (typically approx 1/60 sec)
 	// requestAnimationFrame( loop );
     // control update rate - can attain speed beyond refresh rate ?!
-    setTimeout( loop, 1 ); 
+    setTimeout( loop, loopSpeed ); 
     // user defined updates
     update();
     render();
