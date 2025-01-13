@@ -89,13 +89,14 @@ currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTi
 // used when checking all neighbors of a particle (possible particle-particle interactions)
 var offsets = [[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
 
+// TODO: use setInterval instead?
 var loopSpeed = 16, timeoutID = null; // need ID to stop current setTimeout
 
 document.getElementById("pauseButton"  ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 86400000; simulationLoop(); } ); // 1 FPD: Frame Per Day :)
 document.getElementById("slowestButton").addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 1000; simulationLoop(); } );
 document.getElementById("slowButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 100; simulationLoop(); } );
 document.getElementById("normalButton" ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 16; simulationLoop(); } );
-document.getElementById("fastButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 1; simulationLoop(); } );
+document.getElementById("fastButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 4; simulationLoop(); } );
 
 /**
  *   Each point in the world is represented by a number;
