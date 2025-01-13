@@ -11,22 +11,37 @@
             margin: 6px;
             padding: 6px;
             border: 2px solid black;
-            background-color: lightblue;
+            border-radius: 8px;
+            background-color: #8899AA;
             font-size: 20px;
             font-weight: bold;
-            color: black;
-            text-shadow: 0px 0px 1px rgba(255,255,255, 1.0),
-                0px 0px 2px rgba(255,255,255, 1.0),
-                0px 0px 3px rgba(255,255,255, 1.0),
-                0px 0px 4px rgba(255,255,255, 1.0),
-                0px 0px 5px rgba(255,255,255, 1.0),
-                0px 0px 6px rgba(255,255,255, 1.0),
-                0px 0px 7px rgba(255,255,255, 1.0),
-                0px 0px 8px rgba(255,255,255, 1.0);
-            -xxwebkit-text-stroke-width: 1px;
-            -xwebkit-text-stroke-color: black;
-            border-radius: 8px;
         }
+
+        .font-bw
+        {
+            color: black;
+            text-shadow: 0px 0px 1px white,
+                0px 0px 2px white,
+                0px 0px 3px white,
+                0px 0px 4px white,
+                0px 0px 5px white,
+                0px 0px 6px white,
+                0px 0px 7px white,
+                0px 0px 8px white;
+        }
+        .font-wb
+        {
+            color: white;
+            text-shadow: 0px 0px 1px black,
+                0px 0px 2px black,
+                0px 0px 3px black,
+                0px 0px 4px black,
+                0px 0px 5px black,
+                0px 0px 6px black,
+                0px 0px 7px black,
+                0px 0px 8px black;
+        }
+
     </style>
 </head>
 
@@ -35,20 +50,28 @@
     <tr>
         <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
         <td>
-            <button id="smokeButton" style="background-color: rgb(200, 200, 200);">Smoke</button> <br>
-            <button id="airButton" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
-            <button id="fireButton" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
-            <button id="oilButton" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
-            <button id="waterButton" style="background-color: rgb(20, 20, 235);">Water</button> <br>
-            <button id="lavaButton" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
-            <button id="plantButton" style="background-color: rgb( 20, 180,  20);">Plant</button> <br>
-            <button id="sandButton" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
-            <button id="stoneButton" style="background-color: rgb(150, 150, 150);">Stone</button> <br>
-            <button id="rigidButton" style="background-color: rgb(99, 99, 99);">Stone</button> <br>
-            <button id="slowestButton">Slowest</button> <br>
-            <button id="slowButton">Slow</button> <br>
-            <button id="fastButton">Fast</button> <br>
-            <button id="fastestButton">Fastest</button>
+            <button id="steamButton" class="font-bw" style="background-color: rgb(200, 200, 200);">Steam</button> <br>
+            <button id="airButton" class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
+            <button id="fireButton" class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
+            <button id="oilButton" class="font-bw" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
+            <button id="waterButton" class="font-bw" style="background-color: rgb(20, 20, 235);">Water</button> <br>
+            <button id="lavaButton" class="font-bw" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
+            <button id="plantButton" class="font-bw" style="background-color: rgb( 20, 180,  20);">Plant</button> <br>
+            <button id="woodButton" class="font-bw" style="background-color: rgb(150,  90,  30);">Wood</button> <br>
+            <button id="iceButton" class="font-bw" style="background-color: rgb(100, 200, 235);">Ice</button> <br>
+            <button id="sandButton" class="font-bw" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
+            <button id="stoneButton" class="font-bw" style="background-color: rgb(150, 150, 150);">Stone</button> <br>
+            <button id="wallButton" class="font-bw" style="background-color: rgb(100, 100, 100);">Wall</button> <br>
+            <button id="virusButton" class="font-bw" style="background-color: rgb(235, 180, 180);">Virus</button> <br>
+            <button id="cloneButton" class="font-bw" style="background-color: rgb(150, 235, 150);">Clone</button> <br>
+            <button id="holeButton" class="font-bw" style="background-color: rgb( 50,  50,  50);">Hole</button>
+        </td>
+        <td>
+            <button id="pauseButton" class="font-wb">Pause</button> <br>
+            <button id="slowestButton" class="font-wb">Slow</button> <br>
+            <button id="slowButton" class="font-wb">Moderate</button> <br>
+            <button id="normalButton" class="font-wb">Normal</button> <br>
+            <button id="fastButton" class="font-wb">Fast</button>
         </td>
     </tr>
 </table>
@@ -57,20 +80,22 @@
 <script>
 
 var canvas, gl, world,
-worldWidth = textureWidth = 200,  
-worldHeight = textureHeight = 200, 
+worldWidth = textureWidth = 100,  
+worldHeight = textureHeight = 100, 
 canvasWidth = 800, canvasHeight = 800,
 pixelData, texture, shaderProgram,
 currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTicker = 0; 
 
-var loopSpeed = 16;
-// 16 elements
-// 4 speeds, pause, reset
-// TODO: draw speed separate from world update speed!
-document.getElementById("slowestButton").addEventListener("click", () => { loopSpeed = 1000 } );
-document.getElementById("slowButton").addEventListener("click", () => { loopSpeed = 100 } );
-document.getElementById("fastButton").addEventListener("click", () => { loopSpeed = 16 } );
-document.getElementById("fastestButton").addEventListener("click", () => { loopSpeed = 1 } );
+// used when checking all neighbors of a particle (possible particle-particle interactions)
+var offsets = [[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
+
+var loopSpeed = 16, timeoutID = null; // need ID to stop current setTimeout
+
+document.getElementById("pauseButton"  ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 86400000; simulationLoop(); } ); // 1 FPD: Frame Per Day :)
+document.getElementById("slowestButton").addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 1000; simulationLoop(); } );
+document.getElementById("slowButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 100; simulationLoop(); } );
+document.getElementById("normalButton" ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 16; simulationLoop(); } );
+document.getElementById("fastButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 1; simulationLoop(); } );
 
 /**
  *   Each point in the world is represented by a number;
@@ -87,43 +112,53 @@ document.getElementById("fastestButton").addEventListener("click", () => { loopS
  *  G: Gas,    true/false (1/0), is Gas? (can be displaced in any direction, by heavier particles. can flow L/R through gases)
  *  [[ additional bits could be specified later to store more properties or data ]]
  *  
- *  Special materials:
- *  WALL: RIGID, INERT. (can always skip over these when processing world particles)
- *  INERT: AIR, STONE, SMOKE, WALL
  */
 
 const TYPE_BITS = [0,1,2,3], RANDOM_BITS = [4,5,6,7],
-      RIGID_BIT = 8, INERT_BIT = 9, MOVED_BIT = 10,
+      RIGID_BIT = 8, ACTIVE_BIT = 9, MOVED_BIT = 10,
       SOLID_BIT = 11, LIQUID_BIT = 12, GAS_BIT = 13;
 
-const SMOKE = 0,   AIR = 1,  FIRE = 2,   OIL = 3, WATER = 4, 
-       LAVA = 5, PLANT = 6,  SAND = 7, STONE = 8, RIGID = 9;
+const STEAM =  0,   AIR =  1,  FIRE = 2,   
+        OIL =  3, WATER =  4,  LAVA = 5, 
+      PLANT =  6,  WOOD =  7,
+        ICE =  8,  SAND =  9, STONE = 10, 
+       WALL = 11,  VIRUS = 12, CLONE = 13, HOLE = 15;
 
-// TODO: rename RIGID -> WALL. Later add WOOD (brown), FUNGI (pink), ICE (solid, light blue, FIRE+ICE = AIR+WATER, LAVA+ICE=STONE+WATER), ACID (light green, dissolves everything?)
+var selectedType = SAND, borderType = WALL;
 
-var selectedType = SAND;
-document.getElementById("smokeButton").addEventListener("click", () => { selectedType = SMOKE } );
+document.getElementById("steamButton").addEventListener("click", () => { selectedType = STEAM } );
 document.getElementById("airButton").addEventListener("click", () => { selectedType = AIR } );
 document.getElementById("fireButton").addEventListener("click", () => { selectedType = FIRE } );
 document.getElementById("oilButton").addEventListener("click", () => { selectedType = OIL } );
 document.getElementById("waterButton").addEventListener("click", () => { selectedType = WATER } );
 document.getElementById("lavaButton").addEventListener("click", () => { selectedType = LAVA } );
 document.getElementById("plantButton").addEventListener("click", () => { selectedType = PLANT } );
+document.getElementById("woodButton").addEventListener("click", () => { selectedType = WOOD } );
+document.getElementById("iceButton").addEventListener("click", () => { selectedType = ICE } );
 document.getElementById("sandButton").addEventListener("click", () => { selectedType = SAND } );
 document.getElementById("stoneButton").addEventListener("click", () => { selectedType = STONE } );
-document.getElementById("rigidButton").addEventListener("click", () => { selectedType = RIGID } );
+document.getElementById("wallButton").addEventListener("click", () => { selectedType = WALL } );
+document.getElementById("virusButton").addEventListener("click", () => { selectedType = VIRUS } );
+document.getElementById("cloneButton").addEventListener("click", () => { selectedType = CLONE } );
+document.getElementById("holeButton").addEventListener("click", () => { selectedType = HOLE } );
 
 var colorArray = [];
-colorArray[SMOKE] = [200, 200, 200, 255]; // white
-colorArray[AIR]   = [ 20,  20,  20, 255]; // black
-colorArray[FIRE]  = [235,  20,  20, 255]; // red
+colorArray[STEAM] = [200, 200, 200, 255]; // white
+colorArray[AIR]   = [ 20,  20,  20, 255]; // black // no randomness
+colorArray[FIRE]  = [235,  40,  40, 255]; // red
 colorArray[OIL]   = [200,  20, 235, 255]; // purple
 colorArray[WATER] = [ 20,  20, 235, 255]; // dark blue
 colorArray[LAVA]  = [235, 128,  20, 255]; // orange
 colorArray[PLANT] = [ 20, 180,  20, 255]; // dark green
+colorArray[WOOD]  = [150,  90,  30, 255]; // brown
+colorArray[ICE]   = [100, 200, 235, 255]; // light blue
 colorArray[SAND]  = [235, 235,  20, 255]; // yellow
 colorArray[STONE] = [150, 150, 150, 255]; // light gray
-colorArray[RIGID] = [ 99,  99,  99, 255]; // dark gray
+colorArray[WALL]  = [100, 100, 100, 255]; // gray // no randomness
+colorArray[VIRUS] = [235, 180, 180, 255]; // pink, animated
+colorArray[CLONE] = [150, 235, 150, 255]; // light green, animated
+colorArray[HOLE]  = [ 50,  50,  50, 255]; // dark gray, animated
+
 
 // for particle at position (x,y), change bit at index N to 1
 function setBit( x,y, N ) { world[y][x] = world[y][x] | (1 << N); }
@@ -137,21 +172,23 @@ function getBit( x,y, N ) { return (world[y][x] & (1 << N)) >> N; }
 
 // check states
 function isRigid( x,y )  { return getBit(x,y, RIGID_BIT); }
-function isInert( x,y )  { return getBit(x,y, INERT_BIT); }
+function isActive( x,y ) { return getBit(x,y, ACTIVE_BIT); }
 function isMoved( x,y )  { return getBit(x,y, MOVED_BIT); }
 function isSolid( x,y )  { return getBit(x,y, SOLID_BIT); }
 function isLiquid( x,y ) { return getBit(x,y, LIQUID_BIT); }
 function isGas( x,y )    { return getBit(x,y, GAS_BIT); }
 
-// set state to true
+// state = true
 function setRigid( x,y )  { setBit(x,y, RIGID_BIT); }
-function setInert( x,y )  { setBit(x,y, INERT_BIT); }
+function setActive( x,y ) { setBit(x,y, ACTIVE_BIT); }
 function setMoved( x,y )  { setBit(x,y, MOVED_BIT); }
 function setSolid( x,y )  { setBit(x,y, SOLID_BIT); }
 function setLiquid( x,y ) { setBit(x,y, LIQUID_BIT); }
 function setGas( x,y )    { setBit(x,y, GAS_BIT); }
 
-// set state to false
+// state = false
+function clearRigid( x,y )  { clearBit(x,y, RIGID_BIT); }
+function clearActive( x,y ) { clearBit(x,y, ACTIVE_BIT); }
 function clearMoved( x,y )  { clearBit(x,y, MOVED_BIT); }
 
 // reset particle
@@ -162,6 +199,7 @@ function clearRandom( x,y )  { world[y][x] = world[y][x] & ~(0b1111 << 4); }
 function setRandom( x,y, r ) { world[y][x] = (world[y][x] & ~(0b1111 << 4)) | (r << 4); }
 function getRandom( x,y )    { return (world[y][x] & (0b1111 << 4)) >> 4; }
 function addRandom( x,y, v ) { setRandom( x,y, (getRandom(x,y)+v+11)%11 ); }
+
 // set type bits to a given value
 function setType( x,y, t ) { world[y][x] = world[y][x] | (t << 0); }
 function getType( x,y )    { return world[y][x] & 0b1111; }
@@ -172,20 +210,26 @@ function setParticleFromType( x,y, t )
     clearAll(x,y);
     setType(x,y, t);
     
-    if (t != RIGID && t != AIR)
+    // everything except WALL/AIR has random coloring
+    if (t != WALL && t != AIR)
         setRandom( x,y, Math.floor(10 * Math.random()) );
 
-    if ( t == SMOKE || t == AIR || t == FIRE )
+    if ( t == STEAM || t == AIR || t == FIRE )
         setGas(x,y);
     else if ( t == OIL || t == WATER || t == LAVA )
         setLiquid(x,y);
-    else if ( t == PLANT || t == SAND || t == STONE || t == RIGID )
+    else // ( t == PLANT || t == WOOD || t == ICE || t == SAND || t == STONE  etc )
         setSolid(x,y);
 
-    if (t == RIGID)
+    // things that will never move
+    if (t == WALL || t == HOLE || t == VIRUS || t == CLONE)
         setRigid(x,y);
-    // TODO: INERT (much later)
-    // MOVED is set during particle processing
+
+    // ACTIVE is always set (to true) at beginning of particle processing
+    //   does not apply to particles just transformed from interactions
+    clearActive(x,y);
+    // MOVED may be set during particle processing
+    clearMoved(x,y);
 }
 
 function setParticleFromValue(x,y, v) { world[y][x] = v; }
@@ -194,15 +238,11 @@ function getParticle(x,y) { return world[y][x]; }
 // check if coordinates are within world range
 function isValid(x,y) { return (0 <= x) && (x < worldWidth) && (0 <= y) && (y < worldHeight); }
 
-function couldMove(x,y) { return isValid(x,y) && !isMoved(x,y) && !isRigid(x,y); }
+function couldMove(x,y) { return !isMoved(x,y) && !isRigid(x,y); }
 
 function initializeWorld()
 {
     // remember! y-by-x = rows-by-columns = height-by-width
-    // specification: 
-    //  hundreds digit: 0 for not (yet) moved, 1 for moved
-    //      tens digit: stores particle element type
-    //      ones digit: random except for AIR and RIGID type
     world = [];
     for (let y = 0; y < worldHeight; y++)
         world.push( new Array(worldWidth).fill(0) );
@@ -216,26 +256,27 @@ function initializeWorld()
     setParticleFromType(4,4, SAND);
     setParticleFromType(4,5, SAND);
     
-    // use rigid layers on all sides
+    // set borders on all sides (either WALL or HOLE), avoids out-of-bounds array index errors
     for (let x = 0; x < worldWidth; x++)
     {
-        setParticleFromType(x, 0, RIGID);
-        setParticleFromType(x, worldHeight-1, RIGID);
+        setParticleFromType(x, 0, borderType);
+        setParticleFromType(x, worldHeight-1, borderType);
     }
     for (let y = 0; y < worldHeight; y++)
     {
-        setParticleFromType(0, y, RIGID);
-        setParticleFromType(worldWidth-1, y, RIGID);
+        setParticleFromType(0, y, borderType);
+        setParticleFromType(worldWidth-1, y, borderType);
     }
 }
 
 // avoid unusual behaviors arising from left-to-right processing
-//   by simulating x coordinates in a random order
+//   by processing coordinates in a random order.
+//   does *not* include border cells
 
 var xCoord = [], yCoord = [];
-for (let x = 0; x < worldWidth; x++)
+for (let x = 1; x < worldWidth-1; x++)
     xCoord.push(x);
-for (let y = 0; y < worldHeight; y++)
+for (let y = worldHeight - 2; y >= 1; y--)
     yCoord.push(y);
 
 function shuffleArray(array) 
@@ -280,8 +321,8 @@ function initialize()
 
     initializeTexture();
     initializeWorld();
-    convertWorldDataToPixelData();
-    sendPixelDataToTexture();
+    //convertWorldDataToPixelData();
+    //sendPixelDataToTexture();
 }
 
 // call after shader program initialized
@@ -306,70 +347,130 @@ function initializeTexture()
     gl.uniform1i(uTextureLocation, 0); // only one texture, uses slot 0
 }
 
-var offsetArray = [[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1],[1,0]];
-var o;
-
 function updateWorld()
 {
     // indicate able to move 
+    //  -and- activate particles now (only affects those that switched state last update)
     for (let y = 0; y < worldHeight; y++)
         for (let x = 0; x < worldWidth; x++)
+        {
             clearMoved(x,y);
+            setActive(x,y);
+        }
+
+    // redraw borders on all sides (either WALL or HOLE), avoids out-of-bounds array index errors when moving particles
+    for (let x = 0; x < worldWidth; x++)
+    {
+        setParticleFromType(x, 0, borderType);
+        setParticleFromType(x, worldHeight-1, borderType);
+    }
+    for (let y = 0; y < worldHeight; y++)
+    {
+        setParticleFromType(0, y, borderType);
+        setParticleFromType(worldWidth-1, y, borderType);
+    }
 
     // use to randomize order in which particles are processed
     shuffleArray(xCoord);
-    shuffleArray(yCoord);
+    // shuffleArray(yCoord); // in some ways looks better but introduces visual stripe artifacts and exacerbates "climbing particles" issue
 
-    // TODO: set all FIRE/LAVA to active state (functions setActive, isActive, replaces inert)
-    //     initial setup as clearActive
-
-    // note: bottom-up order is really important
-    // move(swap) things that can move
-    // TODO: figure out the "climbing" problem (eg continuously drop STONE on edge of SAND pile)
-    //   partial solution below but requires limiting spawn to 1/2 pixel wide
-
-    for (let y = worldHeight - 1; y >= 0; y--)
+    for (let j = 0; j < yCoord.length; j++)
     {
-        // y = yCoord[j]; // seems to look better but exacerbates "particles fall up" issue
-        for (let i = 0; i < worldWidth; i++)
+        y = yCoord[j]; 
+        for (let i = 0; i < xCoord.length; i++)
         {
-            x = xCoord[i]; // makes a difference?
+            x = xCoord[i]; // makes a difference? // TODO: change range of array to exclude border cellts
 
-            // things that can't move or have already moved are skipped.
-            if ( !couldMove(x,y) )
-                continue;
+            // TODO: this is clunky
+            if ( getType(x,y) == PLANT ) // plants (temporarily) don't fall if above a solid or next to other plants that are not moving 
+            {
+                if ( isSolid(x,y+1) )
+                    setMoved(x,y);
 
-            // air doesn't do anything -- but it pushes up SMOKE (lighter than air elements)
+                for (let i = 0; i < 8; i++)
+                {
+                    if ( getType(x+offsets[i][0], y+offsets[i][1]) == PLANT && isMoved(x+offsets[i][0], y+offsets[i][1]) )
+                    {
+                        setMoved(x,y);
+                        // also set other?
+                    }
+                }
+            }
+
+            
+
+            // air doesn't do anything -- but it pushes up STEAM (lighter than air elements)??
             // if ( getType(x,y) == AIR )
             //    continue;
 
             // have to do these first! otherwise, things get skipped as they move around.
             // maybe separate y/x loop?
             // react effects
-            //if ( getType(x,y) != AIR && getType(x,y) != RIGID)
+            //if ( getType(x,y) != AIR && getType(x,y) != WALL)
             //    console.log( getType(x,y) )
-            // animation effects
 
-            // TODO: accelerate? limit -- subchecks for isActive in each case?
-            if ( getType(x,y) == FIRE ) // and isActive(x,y)
+            // animation "sparkle" effects
+            if ( getType(x,y) == HOLE || getType(x,y) == CLONE || getType(x,y) == VIRUS )
+                addRandom(x,y,1);
+
+            // interaction effects
+            if ( getType(x,y) == HOLE && isActive(x,y) )
             {
                 for (let i = 0; i < 8; i++)
                 {
-                    o = offsetArray[i];
-                    if ( getType(x+o[0],y+o[1]) == WATER )
+                    if ( getType(x+offsets[i][0], y+offsets[i][1]) != HOLE )
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], AIR);
+                }
+            }
+            else if ( getType(x,y) == VIRUS && isActive(x,y) )
+            {
+                for (let i = 0; i < 8; i++)
+                {
+                    temp = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if ( isActive(x,y) && temp != AIR && temp != VIRUS )
+                    {
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], VIRUS);
+                        clearActive(x,y);
+                    }
+                }
+            }
+            else if ( getType(x,y) == CLONE && isActive(x,y) )
+            {
+                //temp = getType(x,y-1);
+                //if (temp != CLONE)
+                //    setParticleFromType(x,y+1, temp);
+                
+                for (let i = 0; i < 8; i++)
+                {
+                    temp = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if (temp != CLONE && temp != AIR && temp != WALL)
+                        setParticleFromType(x-offsets[i][0], y-offsets[i][1], temp);
+                }
+            }
+            else if ( getType(x,y) == FIRE && isActive(x,y) )
+            {
+                for (let i = 0; i < 8; i++)
+                {
+                    if ( getType(x+offsets[i][0], y+offsets[i][1]) == WATER && isActive(x,y) )
                     {
                         setParticleFromType(x,y, AIR);
-                        setParticleFromType(x+o[0],y+o[1],SMOKE);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], STEAM);
                     }
-                    else if ( getType(x+o[0],y+o[1]) == PLANT )
+                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == PLANT && isActive(x,y) )
                     {
                         setParticleFromType(x,y, AIR); // ??? or no change?
-                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
+                        // setRigid(x+offsets[i][0], y+offsets[i][1]); // PLANT was rigid before?
                     }
-                    else if ( getType(x+o[0],y+o[1]) == OIL )
+                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == OIL && isActive(x,y) )
                     {
                         setParticleFromType(x,y, FIRE); // effect is to restart at max strength
-                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
+                    }
+                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == ICE ) // no active check, to enable residual/nearby heat to generate more water
+                    {
+                        setParticleFromType(x,y, WATER);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], WATER);
                     }
                     // TODO: WOOD, ICE; ?only reduce strength when opposed to AIR?
                 }
@@ -378,45 +479,43 @@ function updateWorld()
             {
                 for (let i = 0; i < 8; i++)
                 {
-                    o = offsetArray[i];
-                    if ( getType(x+o[0],y+o[1]) == WATER )
+                    if ( getType(x+offsets[i][0], y+offsets[i][1]) == WATER && isActive(x,y) )
                     {
-                        setParticleFromType(x,y, SMOKE);
-                        setParticleFromType(x+o[0],y+o[1],STONE);
+                        setParticleFromType(x,y, STEAM);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], STONE);
                     }
-                    else if ( getType(x+o[0],y+o[1]) == PLANT )
+                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == PLANT && isActive(x,y) )
                     {
                         setParticleFromType(x,y, LAVA);
-                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
                     }
-                    else if ( getType(x+o[0],y+o[1]) == OIL )
+                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == OIL && isActive(x,y) )
                     {
                         setParticleFromType(x,y, LAVA); // restart at max strength
-                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
                     }
-                    // TODO: WOOD, ICE; ?only reduce strength when opposed to AIR?
+                    // TODO: WOOD, ICE; SAND? ?only reduce strength when opposed to AIR?
                 }
             }
-
+            
+            // things that can't move or have already moved are skipped.
+            if ( !couldMove(x,y) )
+                continue;
 
             let s = 2 * Math.floor(2 * Math.random()) - 1; // is either +1 or -1
-            if ( canSwapVert(x,y, x,y+1) )
-                doSwap(x,y, 0,1);
+            if ( canSwapVert(x,y, x+0,y+1) )
+                doSwap(x,y, x+0,y+1);
             else if ( canSwapDiag(x,y, x-s,y+1) )
-                doSwap(x,y, -s,1);
+                doSwap(x,y, x-s,y+1);
             else if ( canSwapDiag(x,y, x+s,y+1) )
-                doSwap(x,y, +s,1);
-            else if ( canSwapHoriz(x,y, x-s,y) )
-                doSwap(x,y, -s,0);
-            else if ( canSwapHoriz(x,y, x+s,y) )
-                doSwap(x,y, +s,0);
-
-            
+                doSwap(x,y, x+s,y+1);
+            else if ( canSwapHoriz(x,y, x-s,y+0) )
+                doSwap(x,y, x-s,y+0);
+            else if ( canSwapHoriz(x,y, x+s,y+0) )
+                doSwap(x,y, x+s,y+0);
         }       
     }
 }
-
-// TODO: 
 
 function canSwapVert( px, py, qx, qy )
 {
@@ -449,26 +548,18 @@ function canSwapHoriz( px, py, qx, qy )
         && (getType(px,py) > getType(qx,qy))
         && !canSwapVert(qx,qy-1, qx,qy);
 }
-    /*
 
-    TODO: fails in last line when index out of bounds. (needs floor in simulation.) rethink.
-
-    */
-
-
-function doSwap( pointX, pointY, offsetX, offsetY )
+function doSwap( px, py, qx, qy )
 {
-    value = getParticle(pointX, pointY);
-    setParticleFromValue(pointX, pointY, getParticle(pointX + offsetX, pointY + offsetY));
-    setParticleFromValue(pointX + offsetX, pointY + offsetY, value);
-0
-    // AIR can move again, but nothing else can
-    if ( getType(pointX, pointY) != AIR )
-        setMoved(pointX, pointY);
-    if ( getType(pointX + offsetX, pointY + offsetY) != AIR )
-        setMoved(pointX + offsetX, pointY + offsetY);
+    pValue = getParticle(px,py);
+    setParticleFromValue(px,py, getParticle(qx,qy));
+    setParticleFromValue(qx,qy, pValue);
 
-    
+    // AIR can move again, but nothing else can
+    if ( getType(px, py) != AIR )
+        setMoved(px, py);
+    if ( getType(qx, qy) != AIR )
+        setMoved(qx, qy);
 }
 
 function convertWorldDataToPixelData()
@@ -478,7 +569,6 @@ function convertWorldDataToPixelData()
     {
         for (let x = 0; x < worldWidth; x++)
         {
-
             particleType = getType(x,y);
 
             offsetValue = 4 * (getRandom(x,y) - 5);
@@ -496,6 +586,37 @@ function sendPixelDataToTexture()
 {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, textureWidth, textureHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
+}
+
+function drawParticles()
+{
+    r = 2;
+
+    for (let dx = 0; dx < r; dx++)
+        for (let dy = 0; dy < r; dy++)
+            if ( isValid(mousePixelX + dx, mousePixelY + dy) )
+                setParticleFromType( mousePixelX + dx, mousePixelY + dy, selectedType );
+
+    
+}
+
+function updateTimer()
+{
+    currentTime = performance.now();
+    deltaTime = (currentTime - previousTime) / 1000.0;
+    elapsedTime += deltaTime;
+    previousTime = currentTime;
+    tick++;
+    
+    fpsTimer += deltaTime;
+    fpsTicker++;
+
+    if (fpsTimer >= 1.0)
+    {
+        console.log("FPS: " + fpsTicker);
+        fpsTimer = 0;
+        fpsTicker = 0;
+    }
 }
 
 // optional: user code
@@ -517,34 +638,53 @@ function update()
         fpsTicker = 0;
     }
 
-    r = 2;
-    // TODO: add a disk of particles, function of radius
-    if (mouseDown)
-        for (let dx = 0; dx < r; dx++)
-            for (let dy = 0; dy < r; dy++)
-                if ( distance(mousePixelX, mousePixelY, mousePixelX + dx, mousePixelY + dy ) <= r )
-                    setParticleFromType( mousePixelX + dx, mousePixelY + dy, selectedType );
-
     updateWorld();
     convertWorldDataToPixelData();
     sendPixelDataToTexture();
 }
-
-function distance(x1,y1, x2,y2)
-{
-    return Math.sqrt( (y2-y1)*(y2-y1) + (x2-x1)*(x2-x1) );
-}
-
-// --------- //
-// core code //
-// --------- //
 
 function run()
 {
     // user defined initialization
     webGLsetup();
     initialize();
-    loop();
+
+    // start two loops that run at different rates:
+
+    // simulation (world) updates runs at user-selected speed. (also, record actual FPS data here)
+    // drawing and rendering should run at screen refresh rate (via requestAnimationFrame)
+    // loop();
+    simulationLoop();
+    drawRenderLoop();
+}
+
+
+
+function simulationLoop()
+{
+    // control update rate - can attain speed beyond refresh rate ?!
+    timeoutID = setTimeout( loop, loopSpeed ); 
+    
+    updateTimer();
+    updateWorld();
+    convertWorldDataToPixelData();
+    sendPixelDataToTexture();
+}
+
+function drawRenderLoop()
+{
+    // call function on next screen refresh (typically approx 1/60 sec)
+	requestAnimationFrame( drawRenderLoop );
+    
+    if (mouseDown)
+    {
+        drawParticles();
+        // since world has changed, update texture and send
+        convertWorldDataToPixelData();
+        sendPixelDataToTexture();
+    }
+    
+    render();
 }
 
 function loop() 
@@ -558,17 +698,12 @@ function loop()
     render();
 }
 
+// render the texture to the canvas
 function render()
-{
-    // console.log("rendering...");
-    
+{ 
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     gl.useProgram(shaderProgram);
-
-    const drawOffset = 0;
-    const vertexCount = 4;
-    gl.drawArrays(gl.TRIANGLE_STRIP, drawOffset, vertexCount);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
 var mouseDown = false, mousePixelX = 0, mousePixelY = 0;
