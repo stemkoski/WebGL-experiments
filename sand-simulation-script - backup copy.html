@@ -8,14 +8,21 @@
         button
         {
             width:120px;
-            margin: 8px;
-            padding: 8px;
+            margin: 6px;
+            padding: 6px;
             border: 2px solid black;
             background-color: lightblue;
             font-size: 20px;
             font-weight: bold;
             color: black;
-            text-shadow: 1px 1px 2px rgba(0,0,0, 0.5);
+            text-shadow: 0px 0px 1px rgba(255,255,255, 1.0),
+                0px 0px 2px rgba(255,255,255, 1.0),
+                0px 0px 3px rgba(255,255,255, 1.0),
+                0px 0px 4px rgba(255,255,255, 1.0),
+                0px 0px 5px rgba(255,255,255, 1.0),
+                0px 0px 6px rgba(255,255,255, 1.0),
+                0px 0px 7px rgba(255,255,255, 1.0),
+                0px 0px 8px rgba(255,255,255, 1.0);
             -xxwebkit-text-stroke-width: 1px;
             -xwebkit-text-stroke-color: black;
             border-radius: 8px;
@@ -28,6 +35,16 @@
     <tr>
         <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
         <td>
+            <button id="smokeButton" style="background-color: rgb(200, 200, 200);">Smoke</button> <br>
+            <button id="airButton" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
+            <button id="fireButton" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
+            <button id="oilButton" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
+            <button id="waterButton" style="background-color: rgb(20, 20, 235);">Water</button> <br>
+            <button id="lavaButton" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
+            <button id="plantButton" style="background-color: rgb( 20, 180,  20);">Plant</button> <br>
+            <button id="sandButton" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
+            <button id="stoneButton" style="background-color: rgb(150, 150, 150);">Stone</button> <br>
+            <button id="rigidButton" style="background-color: rgb(99, 99, 99);">Stone</button> <br>
             <button id="slowestButton">Slowest</button> <br>
             <button id="slowButton">Slow</button> <br>
             <button id="fastButton">Fast</button> <br>
@@ -85,6 +102,16 @@ const SMOKE = 0,   AIR = 1,  FIRE = 2,   OIL = 3, WATER = 4,
 // TODO: rename RIGID -> WALL. Later add WOOD (brown), FUNGI (pink), ICE (solid, light blue, FIRE+ICE = AIR+WATER, LAVA+ICE=STONE+WATER), ACID (light green, dissolves everything?)
 
 var selectedType = SAND;
+document.getElementById("smokeButton").addEventListener("click", () => { selectedType = SMOKE } );
+document.getElementById("airButton").addEventListener("click", () => { selectedType = AIR } );
+document.getElementById("fireButton").addEventListener("click", () => { selectedType = FIRE } );
+document.getElementById("oilButton").addEventListener("click", () => { selectedType = OIL } );
+document.getElementById("waterButton").addEventListener("click", () => { selectedType = WATER } );
+document.getElementById("lavaButton").addEventListener("click", () => { selectedType = LAVA } );
+document.getElementById("plantButton").addEventListener("click", () => { selectedType = PLANT } );
+document.getElementById("sandButton").addEventListener("click", () => { selectedType = SAND } );
+document.getElementById("stoneButton").addEventListener("click", () => { selectedType = STONE } );
+document.getElementById("rigidButton").addEventListener("click", () => { selectedType = RIGID } );
 
 var colorArray = [];
 colorArray[SMOKE] = [200, 200, 200, 255]; // white
@@ -93,7 +120,7 @@ colorArray[FIRE]  = [235,  20,  20, 255]; // red
 colorArray[OIL]   = [200,  20, 235, 255]; // purple
 colorArray[WATER] = [ 20,  20, 235, 255]; // dark blue
 colorArray[LAVA]  = [235, 128,  20, 255]; // orange
-colorArray[PLANT] = [ 20, 200,  20, 255]; // dark green
+colorArray[PLANT] = [ 20, 180,  20, 255]; // dark green
 colorArray[SAND]  = [235, 235,  20, 255]; // yellow
 colorArray[STONE] = [150, 150, 150, 255]; // light gray
 colorArray[RIGID] = [ 99,  99,  99, 255]; // dark gray
@@ -130,10 +157,11 @@ function clearMoved( x,y )  { clearBit(x,y, MOVED_BIT); }
 // reset particle
 function clearAll( x,y ) { world[y][x] = 0; }
 
-// set random bits to a given value
-function setRandom( x,y, r ) { world[y][x] = world[y][x] | (r << 4); }
+// set random bits to a given value, 0 <= r <= 10
+function clearRandom( x,y )  { world[y][x] = world[y][x] & ~(0b1111 << 4); }
+function setRandom( x,y, r ) { world[y][x] = (world[y][x] & ~(0b1111 << 4)) | (r << 4); }
 function getRandom( x,y )    { return (world[y][x] & (0b1111 << 4)) >> 4; }
-
+function addRandom( x,y, v ) { setRandom( x,y, (getRandom(x,y)+v+11)%11 ); }
 // set type bits to a given value
 function setType( x,y, t ) { world[y][x] = world[y][x] | (t << 0); }
 function getType( x,y )    { return world[y][x] & 0b1111; }
@@ -188,12 +216,17 @@ function initializeWorld()
     setParticleFromType(4,4, SAND);
     setParticleFromType(4,5, SAND);
     
-    // use rigid layer at bottom to catch materials?
+    // use rigid layers on all sides
     for (let x = 0; x < worldWidth; x++)
+    {
+        setParticleFromType(x, 0, RIGID);
         setParticleFromType(x, worldHeight-1, RIGID);
-
-    setParticleFromType(0, worldHeight-2, RIGID);
-    setParticleFromType(worldWidth-1, worldHeight-2, RIGID);    
+    }
+    for (let y = 0; y < worldHeight; y++)
+    {
+        setParticleFromType(0, y, RIGID);
+        setParticleFromType(worldWidth-1, y, RIGID);
+    }
 }
 
 // avoid unusual behaviors arising from left-to-right processing
@@ -273,6 +306,9 @@ function initializeTexture()
     gl.uniform1i(uTextureLocation, 0); // only one texture, uses slot 0
 }
 
+var offsetArray = [[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1],[1,0]];
+var o;
+
 function updateWorld()
 {
     // indicate able to move 
@@ -284,11 +320,14 @@ function updateWorld()
     shuffleArray(xCoord);
     shuffleArray(yCoord);
 
+    // TODO: set all FIRE/LAVA to active state (functions setActive, isActive, replaces inert)
+    //     initial setup as clearActive
+
     // note: bottom-up order is really important
     // move(swap) things that can move
     // TODO: figure out the "climbing" problem (eg continuously drop STONE on edge of SAND pile)
     //   partial solution below but requires limiting spawn to 1/2 pixel wide
-    // TODO: water ripple across surface problem
+
     for (let y = worldHeight - 1; y >= 0; y--)
     {
         // y = yCoord[j]; // seems to look better but exacerbates "particles fall up" issue
@@ -301,8 +340,64 @@ function updateWorld()
                 continue;
 
             // air doesn't do anything -- but it pushes up SMOKE (lighter than air elements)
-            //if ( getType(x,y) == AIR )
+            // if ( getType(x,y) == AIR )
             //    continue;
+
+            // have to do these first! otherwise, things get skipped as they move around.
+            // maybe separate y/x loop?
+            // react effects
+            //if ( getType(x,y) != AIR && getType(x,y) != RIGID)
+            //    console.log( getType(x,y) )
+            // animation effects
+
+            // TODO: accelerate? limit -- subchecks for isActive in each case?
+            if ( getType(x,y) == FIRE ) // and isActive(x,y)
+            {
+                for (let i = 0; i < 8; i++)
+                {
+                    o = offsetArray[i];
+                    if ( getType(x+o[0],y+o[1]) == WATER )
+                    {
+                        setParticleFromType(x,y, AIR);
+                        setParticleFromType(x+o[0],y+o[1],SMOKE);
+                    }
+                    else if ( getType(x+o[0],y+o[1]) == PLANT )
+                    {
+                        setParticleFromType(x,y, AIR); // ??? or no change?
+                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                    }
+                    else if ( getType(x+o[0],y+o[1]) == OIL )
+                    {
+                        setParticleFromType(x,y, FIRE); // effect is to restart at max strength
+                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                    }
+                    // TODO: WOOD, ICE; ?only reduce strength when opposed to AIR?
+                }
+            }
+            else if ( getType(x,y) == LAVA )
+            {
+                for (let i = 0; i < 8; i++)
+                {
+                    o = offsetArray[i];
+                    if ( getType(x+o[0],y+o[1]) == WATER )
+                    {
+                        setParticleFromType(x,y, SMOKE);
+                        setParticleFromType(x+o[0],y+o[1],STONE);
+                    }
+                    else if ( getType(x+o[0],y+o[1]) == PLANT )
+                    {
+                        setParticleFromType(x,y, LAVA);
+                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                    }
+                    else if ( getType(x+o[0],y+o[1]) == OIL )
+                    {
+                        setParticleFromType(x,y, LAVA); // restart at max strength
+                        setParticleFromType(x+o[0],y+o[1],FIRE);
+                    }
+                    // TODO: WOOD, ICE; ?only reduce strength when opposed to AIR?
+                }
+            }
+
 
             let s = 2 * Math.floor(2 * Math.random()) - 1; // is either +1 or -1
             if ( canSwapVert(x,y, x,y+1) )
@@ -315,13 +410,13 @@ function updateWorld()
                 doSwap(x,y, -s,0);
             else if ( canSwapHoriz(x,y, x+s,y) )
                 doSwap(x,y, +s,0);
+
+            
         }       
     }
 }
 
-// reuse these variables to avoid constant reinitializing / garbage collection
-var otherX = 0, otherY = 0, value = 0, offsetValue = 0, 
- particleType = 0, otherParticleType = 0;
+// TODO: 
 
 function canSwapVert( px, py, qx, qy )
 {
@@ -331,8 +426,9 @@ function canSwapVert( px, py, qx, qy )
      // TODO: AND don't let solids pass through other solids...
     return couldMove(qx,qy)
         && ( getType(px,py) > getType(qx,qy) )
-        && ( getType(qx,qy) <= getType(qx+1,qy) )
-        && ( getType(qx,qy) <= getType(qx-1,qy) );
+        && ( !couldMove(qx+1,qy) || getType(qx,qy) <= getType(qx+1,qy) )
+        && ( !couldMove(qx-1,qy) || getType(qx,qy) <= getType(qx-1,qy) )
+        && ( !(isSolid(px,py) && isSolid(qx,qy)) );
 }
 
 function canSwapDiag( px, py, qx, qy )
@@ -341,7 +437,8 @@ function canSwapDiag( px, py, qx, qy )
     // *and* this particle is heavier/denser than the other particle diagonally below it
     return couldMove(qx,qy)
         && !canSwapVert(qx,qy-1, qx,qy)
-        && (getType(px,py) > getType(qx,qy));
+        && (getType(px,py) > getType(qx,qy))
+        && ( !(isSolid(px,py) && isSolid(qx,qy)) );;
 }
 
 function canSwapHoriz( px, py, qx, qy )
@@ -516,7 +613,11 @@ function webGLsetup()
     canvas.addEventListener("mousemove",  onMouseMove);
     canvas.addEventListener("mouseup",    onMouseUp);
     canvas.addEventListener("mouseleave", onMouseUp);
-    document.addEventListener("keydown", onKeyDown);
+    canvas.addEventListener("touchstart", onMouseDown);
+    canvas.addEventListener("touchmove",  onMouseMove);
+    canvas.addEventListener("touchend",   onMouseUp);
+
+    document.addEventListener("keydown",  onKeyDown);
     
     gl = canvas.getContext("webgl2");
 
