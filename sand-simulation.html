@@ -5,6 +5,16 @@
     <meta charset="utf-8" />
     <title>WebGL Demo</title>
     <style>
+        *
+        {
+            font-family:Verdana, Geneva, Tahoma, sans-serif; 
+            font-size: 20px;
+            font-weight: bold;
+        }
+        body
+        {
+            background-color: blue;
+        }
         button
         {
             width:120px;
@@ -13,8 +23,6 @@
             border: 2px solid black;
             border-radius: 8px;
             background-color: #8899AA;
-            font-size: 20px;
-            font-weight: bold;
         }
 
         .font-bw
@@ -41,6 +49,11 @@
                 0px 0px 7px black,
                 0px 0px 8px black;
         }
+        td
+        {
+            text-align: center;
+            border: 1px solid black;
+        }
 
     </style>
 </head>
@@ -50,21 +63,22 @@
     <tr>
         <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
         <td>
-            <button id="steamButton" class="font-bw" style="background-color: rgb(200, 200, 200);">Steam</button> <br>
-            <button id="airButton" class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
-            <button id="fireButton" class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
-            <button id="oilButton" class="font-bw" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
+            <u>Elements</u> <br>
+            <button id="vaporButton" class="font-bw" style="background-color: rgb(200, 200, 200);">Vapor</button> <br>
+            <button id="airButton"   class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
+            <button id="fireButton"  class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
+            <button id="oilButton"   class="font-bw" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
             <button id="waterButton" class="font-bw" style="background-color: rgb(20, 20, 235);">Water</button> <br>
-            <button id="lavaButton" class="font-bw" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
+            <button id="lavaButton"  class="font-bw" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
             <button id="plantButton" class="font-bw" style="background-color: rgb( 20, 180,  20);">Plant</button> <br>
-            <button id="woodButton" class="font-bw" style="background-color: rgb(150,  90,  30);">Wood</button> <br>
-            <button id="iceButton" class="font-bw" style="background-color: rgb(100, 200, 235);">Ice</button> <br>
-            <button id="sandButton" class="font-bw" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
-            <button id="stoneButton" class="font-bw" style="background-color: rgb(150, 150, 150);">Stone</button> <br>
-            <button id="wallButton" class="font-bw" style="background-color: rgb(100, 100, 100);">Wall</button> <br>
+            <button id="mudButton"   class="font-bw" style="background-color: rgb(150,  90,  30);">Mud</button> <br>
+            <button id="iceButton"   class="font-bw" style="background-color: rgb(100, 200, 235);">Ice</button> <br>
+            <button id="sandButton"  class="font-bw" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
+            <button id="rockButton"  class="font-bw" style="background-color: rgb(150, 150, 150);">Rock</button> <br>
+            <button id="wallButton"  class="font-bw" style="background-color: rgb(100, 100, 100);">Wall</button> <br>
             <button id="virusButton" class="font-bw" style="background-color: rgb(235, 180, 180);">Virus</button> <br>
             <button id="cloneButton" class="font-bw" style="background-color: rgb(150, 235, 150);">Clone</button> <br>
-            <button id="holeButton" class="font-bw" style="background-color: rgb( 50,  50,  50);">Hole</button>
+            <button id="holeButton"  class="font-bw" style="background-color: rgb( 50,  50,  50);">Hole</button>
         </td>
         <td>
             <button id="pauseButton" class="font-wb">Pause</button> <br>
@@ -86,27 +100,30 @@ canvasWidth = 800, canvasHeight = 800,
 pixelData, texture, shaderProgram,
 currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTicker = 0; 
 
-// used when checking all neighbors of a particle (possible particle-particle interactions)
-var offsets = [[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
+
 
 // TODO: use setInterval instead?
 var loopSpeed = 16, timeoutID = null; // need ID to stop current setTimeout
 
-document.getElementById("pauseButton"  ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 86400000; simulationLoop(); } ); // 1 FPD: Frame Per Day :)
-document.getElementById("slowestButton").addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 1000; simulationLoop(); } );
-document.getElementById("slowButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 100; simulationLoop(); } );
-document.getElementById("normalButton" ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 16; simulationLoop(); } );
-document.getElementById("fastButton"   ).addEventListener("click", () => { clearTimeout(timeoutID); loopSpeed = 4; simulationLoop(); } );
+// TODO: fix pause mechanic
+document.getElementById("pauseButton"  ).addEventListener("click", () => { loopSpeed = 1000; } ); // 1 FPD: Frame Per Day :)
+document.getElementById("slowestButton").addEventListener("click", () => { loopSpeed = 1000; } );
+document.getElementById("slowButton"   ).addEventListener("click", () => { loopSpeed = 100; } );
+document.getElementById("normalButton" ).addEventListener("click", () => { loopSpeed = 16;  } );
+document.getElementById("fastButton"   ).addEventListener("click", () => { loopSpeed = 4; } );
 
 /**
  *   Each point in the world is represented by a number;
  *     int = data structure via bits 
  * 
  *  14 bit int: SLGRIMVVVVTTTT
+ * 
+ *  TODO: A SLG FAM VVVVVVVV RRRR TTTT
+ * 
  *  TTTT: type (e.g. ), 0-15, also used for base color, also used for relative density (some particles fall through others)
  *  VVVV: random value, 0-10, used for RGB color variation
  *  R: Rigid,  true/false (1/0), affected by gravity?
- *  I: Inert,  true/false (1/0), does not interact with any particle in any special way? (may improve program performance)
+ *  A: Active, true/false (1/0), can interact with other particles? (must have existed for at least one tick)
  *  M: Moved,  true/false (1/0), did the particle move during this cycle? (particles only move once) 
  *  S: Solid,  true/false (1/0), is Solid? (is only displaced in L/R direction, by heavier particles (other solids))
  *  L: Liquid, true/false (1/0), is Liquid? (can be displaced in any direction, by heavier particles. can flow L/R through liquids/gases)
@@ -115,51 +132,70 @@ document.getElementById("fastButton"   ).addEventListener("click", () => { clear
  *  
  */
 
-const TYPE_BITS = [0,1,2,3], RANDOM_BITS = [4,5,6,7],
-      RIGID_BIT = 8, ACTIVE_BIT = 9, MOVED_BIT = 10,
-      SOLID_BIT = 11, LIQUID_BIT = 12, GAS_BIT = 13;
+const TYPE_BITS   = [0,1,2,3], 
+      RANDOM_BITS = [4,5,6,7],
+      VALUE_BITS  = [8,9,10,11,12,13,14,15],
+      RIGID_BIT = 16, ACTIVE_BIT = 17, MOVED_BIT = 18,
+      SOLID_BIT = 19, LIQUID_BIT = 20,   GAS_BIT = 21,
+      ANIMATE_BIT = 22;
+      
+      // RIGID -> rename to GRAVITY_BIT? or FALL_BIT?
+      // ANIMATE_BIT: 22
 
-const STEAM =  0,   AIR =  1,  FIRE = 2,   
-        OIL =  3, WATER =  4,  LAVA = 5, 
-      PLANT =  6,  WOOD =  7,
-        ICE =  8,  SAND =  9, STONE = 10, 
-       WALL = 11,  VIRUS = 12, CLONE = 13, HOLE = 15;
+const VAPOR =  0,   AIR =  1,  FIRE =  2,   
+        OIL =  3, WATER =  4,  LAVA =  5,    MUD =  6,
+      PLANT =  7,   ICE =  8,  SAND =  9,   ROCK = 10, 
+       WALL = 11, VIRUS = 12, CLONE = 13, MUTATE = 14, HOLE = 15;
 
-var selectedType = SAND, borderType = WALL;
+var selectedType = ROCK, borderType = WALL;
 
-document.getElementById("steamButton").addEventListener("click", () => { selectedType = STEAM } );
+var gasTypes = [VAPOR, AIR];
+var liquidTypes = [OIL, WATER, LAVA];
+var solidTypes = [PLANT, MUD, ICE, SAND, ROCK, FIRE]; 
+// FIRE is included in list of solids so that it doesn't flow sideways like liquid/gas
+// FIRE has low index because "heat rises"
+
+// the particle types that can change other particle types
+// (also technically AIR, but this is included by the types below, 
+//  and checking all neighbors of every AIR each tick would take a lot of time)
+var transmuteTypes = [FIRE, LAVA, WATER, ICE, PLANT, MUD, VAPOR];
+// reusable variables
+var particleType, neighborType;
+// used when checking all neighbors of a particle (possible particle-particle interactions)
+var offsets = [ [-1,-1], [0,-1], [1,-1], [1,0], [1,1], [0,1], [-1,1], [-1,0] ];
+
+document.getElementById("vaporButton").addEventListener("click", () => { selectedType = VAPOR } );
 document.getElementById("airButton").addEventListener("click", () => { selectedType = AIR } );
 document.getElementById("fireButton").addEventListener("click", () => { selectedType = FIRE } );
 document.getElementById("oilButton").addEventListener("click", () => { selectedType = OIL } );
 document.getElementById("waterButton").addEventListener("click", () => { selectedType = WATER } );
 document.getElementById("lavaButton").addEventListener("click", () => { selectedType = LAVA } );
 document.getElementById("plantButton").addEventListener("click", () => { selectedType = PLANT } );
-document.getElementById("woodButton").addEventListener("click", () => { selectedType = WOOD } );
+document.getElementById("mudButton").addEventListener("click", () => { selectedType = MUD } );
 document.getElementById("iceButton").addEventListener("click", () => { selectedType = ICE } );
 document.getElementById("sandButton").addEventListener("click", () => { selectedType = SAND } );
-document.getElementById("stoneButton").addEventListener("click", () => { selectedType = STONE } );
+document.getElementById("rockButton").addEventListener("click", () => { selectedType = ROCK } );
 document.getElementById("wallButton").addEventListener("click", () => { selectedType = WALL } );
 document.getElementById("virusButton").addEventListener("click", () => { selectedType = VIRUS } );
 document.getElementById("cloneButton").addEventListener("click", () => { selectedType = CLONE } );
 document.getElementById("holeButton").addEventListener("click", () => { selectedType = HOLE } );
 
 var colorArray = [];
-colorArray[STEAM] = [200, 200, 200, 255]; // white
+colorArray[VAPOR] = [200, 200, 200, 255]; // white
 colorArray[AIR]   = [ 20,  20,  20, 255]; // black // no randomness
 colorArray[FIRE]  = [235,  40,  40, 255]; // red
 colorArray[OIL]   = [200,  20, 235, 255]; // purple
 colorArray[WATER] = [ 20,  20, 235, 255]; // dark blue
 colorArray[LAVA]  = [235, 128,  20, 255]; // orange
 colorArray[PLANT] = [ 20, 180,  20, 255]; // dark green
-colorArray[WOOD]  = [150,  90,  30, 255]; // brown
+colorArray[MUD]   = [150,  90,  30, 255]; // brown
 colorArray[ICE]   = [100, 200, 235, 255]; // light blue
 colorArray[SAND]  = [235, 235,  20, 255]; // yellow
-colorArray[STONE] = [150, 150, 150, 255]; // light gray
-colorArray[WALL]  = [100, 100, 100, 255]; // gray // no randomness
+colorArray[ROCK]  = [150, 150, 150, 255]; // light gray
+colorArray[WALL]  = [100, 100, 100, 255]; // gray // no randomness // TODO: tan sparkle
 colorArray[VIRUS] = [235, 180, 180, 255]; // pink, animated
 colorArray[CLONE] = [150, 235, 150, 255]; // light green, animated
 colorArray[HOLE]  = [ 50,  50,  50, 255]; // dark gray, animated
-
 
 // for particle at position (x,y), change bit at index N to 1
 function setBit( x,y, N ) { world[y][x] = world[y][x] | (1 << N); }
@@ -195,15 +231,21 @@ function clearMoved( x,y )  { clearBit(x,y, MOVED_BIT); }
 // reset particle
 function clearAll( x,y ) { world[y][x] = 0; }
 
-// set random bits to a given value, 0 <= r <= 10
+// set type bits to a given value
+function setType( x,y, t ) { world[y][x] = (world[y][x] & ~(0b1111 << 0)) | (t << 0); }
+function getType( x,y )    { return world[y][x] & 0b1111; }
+
+// set random bits to a given number, 0 <= r <= 10
 function clearRandom( x,y )  { world[y][x] = world[y][x] & ~(0b1111 << 4); }
 function setRandom( x,y, r ) { world[y][x] = (world[y][x] & ~(0b1111 << 4)) | (r << 4); }
 function getRandom( x,y )    { return (world[y][x] & (0b1111 << 4)) >> 4; }
-function addRandom( x,y, v ) { setRandom( x,y, (getRandom(x,y)+v+11)%11 ); }
+function addRandom( x,y, v ) { setRandom( x,y, (getRandom(x,y)+v+11)%11 ); } // wraparound desired for shimmer animation
 
-// set type bits to a given value
-function setType( x,y, t ) { world[y][x] = world[y][x] | (t << 0); }
-function getType( x,y )    { return world[y][x] & 0b1111; }
+// set value bits to a given number, 0 <= r <= 255
+function clearValue( x,y )  { world[y][x] = world[y][x] & ~(0b11111111 << 8); }
+function setValue( x,y, r ) { world[y][x] = (world[y][x] & ~(0b11111111 << 8)) | (r << 8); }
+function getValue( x,y )    { return (world[y][x] & (0b11111111 << 8)) >> 8; }
+function addValue( x,y, v ) { setValue( x,y, getValue(x,y)+v ); } // careful to avoid wraparound...
 
 // set all particle properties based on type
 function setParticleFromType( x,y, t )
@@ -215,16 +257,20 @@ function setParticleFromType( x,y, t )
     if (t != WALL && t != AIR)
         setRandom( x,y, Math.floor(10 * Math.random()) );
 
-    if ( t == STEAM || t == AIR || t == FIRE )
+    if ( gasTypes.includes(t) ) // FIRE?
         setGas(x,y);
-    else if ( t == OIL || t == WATER || t == LAVA )
+    else if ( liquidTypes.includes(t) )
         setLiquid(x,y);
-    else // ( t == PLANT || t == WOOD || t == ICE || t == SAND || t == STONE  etc )
+    else // if ( solidTypes.includes(t) ) 
         setSolid(x,y);
 
     // things that will never move
-    if (t == WALL || t == HOLE || t == VIRUS || t == CLONE)
+    if (t == PLANT || t == WALL || t == HOLE || t == VIRUS || t == CLONE)
         setRigid(x,y);
+
+    // special values
+    if (t == FIRE)
+        setValue(x,y, 255);
 
     // ACTIVE is always set (to true) at beginning of particle processing
     //   does not apply to particles just transformed from interactions
@@ -322,8 +368,6 @@ function initialize()
 
     initializeTexture();
     initializeWorld();
-    //convertWorldDataToPixelData();
-    //sendPixelDataToTexture();
 }
 
 // call after shader program initialized
@@ -375,47 +419,23 @@ function updateWorld()
     shuffleArray(xCoord);
     // shuffleArray(yCoord); // in some ways looks better but introduces visual stripe artifacts and exacerbates "climbing particles" issue
 
+    // FIRST: process all particle interactions
+    // (must process reactions first, otherwise, particles get skipped as they move around)
     for (let j = 0; j < yCoord.length; j++)
     {
         y = yCoord[j]; 
         for (let i = 0; i < xCoord.length; i++)
         {
-            x = xCoord[i]; // makes a difference? // TODO: change range of array to exclude border cellts
+            x = xCoord[i];
 
-            // TODO: this is clunky
-            if ( getType(x,y) == PLANT ) // plants (temporarily) don't fall if above a solid or next to other plants that are not moving 
-            {
-                if ( isSolid(x,y+1) )
-                    setMoved(x,y);
-
-                for (let i = 0; i < 8; i++)
-                {
-                    if ( getType(x+offsets[i][0], y+offsets[i][1]) == PLANT && isMoved(x+offsets[i][0], y+offsets[i][1]) )
-                    {
-                        setMoved(x,y);
-                        // also set other?
-                    }
-                }
-            }
-
-            
-
-            // air doesn't do anything -- but it pushes up STEAM (lighter than air elements)??
-            // if ( getType(x,y) == AIR )
-            //    continue;
-
-            // have to do these first! otherwise, things get skipped as they move around.
-            // maybe separate y/x loop?
-            // react effects
-            //if ( getType(x,y) != AIR && getType(x,y) != WALL)
-            //    console.log( getType(x,y) )
+            particleType = getType(x,y);
 
             // animation "sparkle" effects
             if ( getType(x,y) == HOLE || getType(x,y) == CLONE || getType(x,y) == VIRUS )
                 addRandom(x,y,1);
 
-            // interaction effects
-            if ( getType(x,y) == HOLE && isActive(x,y) )
+            // special interactions
+            if ( particleType == HOLE && isActive(x,y) )
             {
                 for (let i = 0; i < 8; i++)
                 {
@@ -423,82 +443,152 @@ function updateWorld()
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], AIR);
                 }
             }
-            else if ( getType(x,y) == VIRUS && isActive(x,y) )
+            else if ( particleType == VIRUS && isActive(x,y) )
             {
                 for (let i = 0; i < 8; i++)
                 {
-                    temp = getType(x+offsets[i][0], y+offsets[i][1]);
-                    if ( isActive(x,y) && temp != AIR && temp != VIRUS )
+                    neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if ( isActive(x,y) && neighborType != AIR && neighborType != VIRUS )
                     {
-                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], VIRUS);
                         clearActive(x,y);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], VIRUS);
                     }
                 }
             }
-            else if ( getType(x,y) == CLONE && isActive(x,y) )
-            {
-                //temp = getType(x,y-1);
-                //if (temp != CLONE)
-                //    setParticleFromType(x,y+1, temp);
-                
+            else if ( particleType == CLONE && isActive(x,y) )
+            {   
                 for (let i = 0; i < 8; i++)
                 {
-                    temp = getType(x+offsets[i][0], y+offsets[i][1]);
-                    if (temp != CLONE && temp != AIR && temp != WALL)
-                        setParticleFromType(x-offsets[i][0], y-offsets[i][1], temp);
+                    neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if (neighborType != CLONE && neighborType != AIR && neighborType != WALL)
+                        setParticleFromType(x-offsets[i][0], y-offsets[i][1], neighborType);
                 }
             }
-            else if ( getType(x,y) == FIRE && isActive(x,y) )
+
+            // element-element reactions
+            particleType = getType(x,y);
+            if ( transmuteTypes.includes(particleType) && isActive(x,y) )
             {
                 for (let i = 0; i < 8; i++)
                 {
-                    if ( getType(x+offsets[i][0], y+offsets[i][1]) == WATER && isActive(x,y) )
+                    // need to recheck type/active since they may change during loop
+                    particleType = getType(x,y);
+                    neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if ( !isActive(x,y) || !isActive(x+offsets[i][0], y+offsets[i][1]) )
+                        continue;
+
+                    if ( particleType == FIRE && neighborType == OIL )
                     {
-                        setParticleFromType(x,y, AIR);
-                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], STEAM);
-                    }
-                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == PLANT && isActive(x,y) )
-                    {
-                        setParticleFromType(x,y, AIR); // ??? or no change?
-                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
-                        // setRigid(x+offsets[i][0], y+offsets[i][1]); // PLANT was rigid before?
-                    }
-                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == OIL && isActive(x,y) )
-                    {
-                        setParticleFromType(x,y, FIRE); // effect is to restart at max strength
+                        clearActive(x,y); // each particle can only affect 1 neighbor per tick
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
                     }
-                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == ICE ) // no active check, to enable residual/nearby heat to generate more water
+                    else if ( particleType == FIRE && neighborType == WATER )
+                    {
+                        setParticleFromType(x,y, AIR); // extinguished
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], VAPOR);
+                    }
+                    else if ( particleType == FIRE && neighborType == PLANT )
+                    {
+                        clearActive(x,y); // each particle can only affect 1 neighbor per tick
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
+                        setRigid(x+offsets[i][0], y+offsets[i][1]); // burning PLANT remains stationary
+                    }
+                    else if ( particleType == FIRE && neighborType == ICE )
+                    {
+                        setParticleFromType(x,y, AIR); // extinguished
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], WATER);
+                    }
+                    else if ( particleType == FIRE && neighborType == SAND )
+                    {
+                        clearActive(x,y); // each particle can only affect 1 neighbor per tick
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], LAVA);
+                    }
+                    else if ( particleType == FIRE && neighborType == MUD )
+                    {
+                        setParticleFromType(x,y, AIR); // extinguished
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], SAND);
+                    }
+                    else if ( particleType == FIRE && neighborType == AIR )
+                    {
+                        addValue(x,y, -1);
+                        if ( getValue(x,y) == 0 )
+                            setParticleFromType(x,y, AIR); // cooled | burnt out
+                    }
+                    else if ( particleType == LAVA && neighborType == OIL )
+                    {
+                        clearActive(x,y); // each particle can only affect 1 neighbor per tick
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
+                    }
+                    else if ( particleType == LAVA && neighborType == WATER )
+                    {
+                        setParticleFromType(x,y, ROCK);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], VAPOR);
+                    }
+                    else if ( particleType == LAVA && neighborType == PLANT )
+                    {
+                        clearActive(x,y); // each particle can only affect 1 neighbor per tick
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
+                        setRigid(x+offsets[i][0], y+offsets[i][1]); // burning PLANT remains stationary
+                    }
+                    else if ( particleType == LAVA && neighborType == ICE )
+                    {
+                        setParticleFromType(x,y, ROCK);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], WATER);
+                    }
+                    else if ( particleType == LAVA && neighborType == MUD )
+                    {
+                        setParticleFromType(x,y, ROCK);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], SAND);
+                    }
+                    else if ( particleType == LAVA && neighborType == AIR )
+                    {
+                        // TODO
+                    }
+                    else if ( particleType == PLANT && neighborType == WATER )
+                    {
+                        // TODO PLANT
+                    }
+                    else if ( particleType == PLANT && neighborType == MUD )
+                    {
+                        // TODO PLANT
+                    }
+                    else if ( particleType == ICE && neighborType == VAPOR )
                     {
                         setParticleFromType(x,y, WATER);
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], WATER);
                     }
-                    // TODO: WOOD, ICE; ?only reduce strength when opposed to AIR?
+                    else if ( particleType == ICE && neighborType == AIR )
+                    {
+                        // TODO WATER
+                    }
+                    else if ( particleType == WATER && neighborType == SAND )
+                    {
+                        setParticleFromType(x,y, AIR);
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], MUD);
+                    }
+                    else if ( particleType == MUD && neighborType == AIR ) 
+                    {
+                        // TODO SAND
+                    }
+                    else if ( particleType == VAPOR && neighborType == AIR ) 
+                    {
+                        // TODO WATER
+                    }
+                    // 20 interactions
                 }
             }
-            else if ( getType(x,y) == LAVA )
-            {
-                for (let i = 0; i < 8; i++)
-                {
-                    if ( getType(x+offsets[i][0], y+offsets[i][1]) == WATER && isActive(x,y) )
-                    {
-                        setParticleFromType(x,y, STEAM);
-                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], STONE);
-                    }
-                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == PLANT && isActive(x,y) )
-                    {
-                        setParticleFromType(x,y, LAVA);
-                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
-                    }
-                    else if ( getType(x+offsets[i][0], y+offsets[i][1]) == OIL && isActive(x,y) )
-                    {
-                        setParticleFromType(x,y, LAVA); // restart at max strength
-                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], FIRE);
-                    }
-                    // TODO: WOOD, ICE; SAND? ?only reduce strength when opposed to AIR?
-                }
-            }
-            
+
+        }       
+    }
+
+    // SECOND: process all particle movements
+    for (let j = 0; j < yCoord.length; j++)
+    {
+        y = yCoord[j]; 
+        for (let i = 0; i < xCoord.length; i++)
+        {
+            x = xCoord[i];
+
             // things that can't move or have already moved are skipped.
             if ( !couldMove(x,y) )
                 continue;
@@ -514,7 +604,7 @@ function updateWorld()
                 doSwap(x,y, x-s,y+0);
             else if ( canSwapHoriz(x,y, x+s,y+0) )
                 doSwap(x,y, x+s,y+0);
-        }       
+        }
     }
 }
 
@@ -576,7 +666,8 @@ function convertWorldDataToPixelData()
             pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
             pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
             pixelData[i + 2] = colorArray[ particleType ][2] + offsetValue; // Blue
-            pixelData[i + 3] = colorArray[ particleType ][3]; // Alpha
+            pixelData[i + 3] = colorArray[ particleType ][3] = ((particleType == FIRE) ? 50 : 255); // Alpha
+
             i += 4;
         }
         // console.log(i)
