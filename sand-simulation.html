@@ -13,7 +13,7 @@
         }
         body
         {
-            background-color: blue;
+            background-color: black;
         }
         button
         {
@@ -89,6 +89,7 @@
         </td>
     </tr>
 </table>
+<div id="debug">debug</div>
 </body>
 
 <script>
@@ -99,8 +100,6 @@ worldHeight = textureHeight = 100,
 canvasWidth = 800, canvasHeight = 800,
 pixelData, texture, shaderProgram,
 currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTicker = 0; 
-
-
 
 // TODO: use setInterval instead?
 var loopSpeed = 16, timeoutID = null; // need ID to stop current setTimeout
@@ -363,11 +362,6 @@ run();
 // optional: user code
 function initialize()
 {
-    currentTime = performance.now();
-    previousTime = performance.now();
-
-    initializeTexture();
-    initializeWorld();
 }
 
 // call after shader program initialized
@@ -666,7 +660,7 @@ function convertWorldDataToPixelData()
             pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
             pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
             pixelData[i + 2] = colorArray[ particleType ][2] + offsetValue; // Blue
-            pixelData[i + 3] = colorArray[ particleType ][3] = ((particleType == FIRE) ? 50 : 255); // Alpha
+            pixelData[i + 3] = colorArray[ particleType ][3] = (particleType == FIRE ? getValue(x,y) : 255); // Alpha
 
             i += 4;
         }
@@ -686,10 +680,16 @@ function drawParticles()
 
     for (let dx = 0; dx < r; dx++)
         for (let dy = 0; dy < r; dy++)
-            if ( isValid(mousePixelX + dx, mousePixelY + dy) )
-                setParticleFromType( mousePixelX + dx, mousePixelY + dy, selectedType );
+            if ( isValid(drawPixelX + dx, drawPixelY + dy) )
+                setParticleFromType( drawPixelX + dx, drawPixelY + dy, selectedType );
 
     
+}
+
+function initializeTimer()
+{
+    currentTime = performance.now();
+    previousTime = performance.now();
 }
 
 function updateTimer()
@@ -737,9 +737,11 @@ function update()
 
 function run()
 {
-    // user defined initialization
-    webGLsetup();
-    initialize();
+    initializeTimer();
+    initializeCanvas();
+    initializeWebGL();
+    initializeTexture();
+    initializeWorld();
 
     // start two loops that run at different rates:
 
@@ -750,12 +752,11 @@ function run()
     drawRenderLoop();
 }
 
-
-
 function simulationLoop()
 {
+    // TODO: switch to setInterval
     // control update rate - can attain speed beyond refresh rate ?!
-    timeoutID = setTimeout( loop, loopSpeed ); 
+    timeoutID = setTimeout( simulationLoop, loopSpeed ); 
     
     updateTimer();
     updateWorld();
@@ -768,7 +769,7 @@ function drawRenderLoop()
     // call function on next screen refresh (typically approx 1/60 sec)
 	requestAnimationFrame( drawRenderLoop );
     
-    if (mouseDown)
+    if (drawActive)
     {
         drawParticles();
         // since world has changed, update texture and send
@@ -776,17 +777,6 @@ function drawRenderLoop()
         sendPixelDataToTexture();
     }
     
-    render();
-}
-
-function loop() 
-{
-    // call function on next screen refresh (typically approx 1/60 sec)
-	// requestAnimationFrame( loop );
-    // control update rate - can attain speed beyond refresh rate ?!
-    setTimeout( loop, loopSpeed ); 
-    // user defined updates
-    update();
     render();
 }
 
@@ -798,29 +788,44 @@ function render()
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-var mouseDown = false, mousePixelX = 0, mousePixelY = 0;
-function onMouseDown(event)
+var drawActive = false, drawPixelX = 0, drawPixelY = 0;
+
+function setDrawActiveMouse(event)
 {
+    drawActive = true; 
+    setDrawPixelFromMouse(event);
+}
+
+function setDrawActiveTouch(event)
+{
+    drawActive = true; 
+    setDrawPixelFromTouch(event);
+}
+
+function setDrawPixelFromMouse(event)
+{
+    event.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    mousePixelX = (x / (canvasWidth/worldWidth)) | 0;
-    mousePixelY = (y / (canvasHeight/worldHeight)) | 0;
-    mouseDown = true;    
+    drawPixelX = (x / (canvasWidth/worldWidth)) | 0;
+    drawPixelY = (y / (canvasHeight/worldHeight)) | 0;
 }
 
-function onMouseMove(event)
+function setDrawPixelFromTouch(event)
 {
+    event.preventDefault();  
     const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    mousePixelX = (x / (canvasWidth/worldWidth)) | 0;
-    mousePixelY = (y / (canvasHeight/worldHeight)) | 0;
+    const x = event.targetTouches[0].pageX - rect.left;
+    const y = event.targetTouches[0].pageY - rect.top;
+    drawPixelX = (x / (canvasWidth/worldWidth)) | 0;
+    drawPixelY = (y / (canvasHeight/worldHeight)) | 0;
 }
 
-function onMouseUp(event)
+function setDrawInactive(event)
 {
-    mouseDown = false;
+    event.preventDefault();
+    drawActive = false;
 }
 
 function onKeyDown(event)
@@ -829,24 +834,26 @@ function onKeyDown(event)
         selectedType = event.keyCode - 48;
 }
 
-function webGLsetup() 
+function initializeCanvas()
 {
     canvas = document.querySelector("#glcanvas");
     canvas.width = textureWidth;
     canvas.height = textureHeight;
     canvas.style = `width: ${canvasWidth}; height: ${canvasHeight}px; image-rendering: pixelated;`
 
-    canvas.addEventListener("mousedown",  onMouseDown);
-    canvas.addEventListener("mousemove",  onMouseMove);
-    canvas.addEventListener("mouseup",    onMouseUp);
-    canvas.addEventListener("mouseleave", onMouseUp);
-    canvas.addEventListener("touchstart", onMouseDown);
-    canvas.addEventListener("touchmove",  onMouseMove);
-    canvas.addEventListener("touchend",   onMouseUp);
-
+    canvas.addEventListener("mousedown",  setDrawActiveMouse);
+    canvas.addEventListener("mousemove",  setDrawPixelFromMouse);
+    canvas.addEventListener("mouseup",    setDrawInactive);
+    canvas.addEventListener("mouseleave", setDrawInactive);
+    canvas.addEventListener("touchstart", setDrawActiveTouch);
+    canvas.addEventListener("touchmove",  setDrawPixelFromTouch);
+    canvas.addEventListener("touchend",   setDrawInactive);
     document.addEventListener("keydown",  onKeyDown);
-    
-    gl = canvas.getContext("webgl2");
+}
+
+function initializeWebGL()
+{    
+    gl = canvas.getContext("webgl2", { premultipliedAlpha: false });
 
     if (gl == null) 
     {
@@ -854,7 +861,7 @@ function webGLsetup()
         return;
     }
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.5);
 
     shaderProgram = initProgram(gl, vertexShaderCode, fragmentShaderCode);
 
