@@ -64,7 +64,7 @@
         <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
         <td>
             <u>Elements</u> <br>
-            <button id="vaporButton" class="font-bw" style="background-color: rgb(200, 200, 200);">Vapor</button> <br>
+            <button id="vaporButton" class="font-bw" style="background-color: rgb(160, 180, 210);">Vapor</button> <br>
             <button id="airButton"   class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
             <button id="fireButton"  class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
             <button id="oilButton"   class="font-bw" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
@@ -89,7 +89,6 @@
         </td>
     </tr>
 </table>
-<div id="debug">debug</div>
 </body>
 
 <script>
@@ -133,7 +132,7 @@ document.getElementById("fastButton"   ).addEventListener("click", () => { loopS
 
 const TYPE_BITS   = [0,1,2,3], 
       RANDOM_BITS = [4,5,6,7],
-      VALUE_BITS  = [8,9,10,11,12,13,14,15],
+      VALUE_BITS  = [8,9,10,11,12,13,14,15], // max val 2^8 = 256
       RIGID_BIT = 16, ACTIVE_BIT = 17, MOVED_BIT = 18,
       SOLID_BIT = 19, LIQUID_BIT = 20,   GAS_BIT = 21,
       ANIMATE_BIT = 22;
@@ -142,7 +141,7 @@ const TYPE_BITS   = [0,1,2,3],
       // ANIMATE_BIT: 22
 
 const VAPOR =  0,   AIR =  1,  FIRE =  2,   
-        OIL =  3, WATER =  4,  LAVA =  5,    MUD =  6,
+        OIL =  3, WATER =  4,   MUD =  5,   LAVA =  6,
       PLANT =  7,   ICE =  8,  SAND =  9,   ROCK = 10, 
        WALL = 11, VIRUS = 12, CLONE = 13, MUTATE = 14, HOLE = 15;
 
@@ -157,7 +156,7 @@ var solidTypes = [PLANT, MUD, ICE, SAND, ROCK, FIRE];
 // the particle types that can change other particle types
 // (also technically AIR, but this is included by the types below, 
 //  and checking all neighbors of every AIR each tick would take a lot of time)
-var transmuteTypes = [FIRE, LAVA, WATER, ICE, PLANT, MUD, VAPOR];
+var transmuteTypes = [FIRE, LAVA, WATER, ICE, PLANT, MUD, VAPOR]; // into: [AIR, ROCK, PLANT, WATER, OIL, SAND, WATER]
 // reusable variables
 var particleType, neighborType;
 // used when checking all neighbors of a particle (possible particle-particle interactions)
@@ -180,7 +179,7 @@ document.getElementById("cloneButton").addEventListener("click", () => { selecte
 document.getElementById("holeButton").addEventListener("click", () => { selectedType = HOLE } );
 
 var colorArray = [];
-colorArray[VAPOR] = [200, 200, 200, 255]; // white
+colorArray[VAPOR] = [160, 180, 210, 255]; // white (just a hint of blue)
 colorArray[AIR]   = [ 20,  20,  20, 255]; // black // no randomness
 colorArray[FIRE]  = [235,  40,  40, 255]; // red
 colorArray[OIL]   = [200,  20, 235, 255]; // purple
@@ -244,7 +243,7 @@ function addRandom( x,y, v ) { setRandom( x,y, (getRandom(x,y)+v+11)%11 ); } // 
 function clearValue( x,y )  { world[y][x] = world[y][x] & ~(0b11111111 << 8); }
 function setValue( x,y, r ) { world[y][x] = (world[y][x] & ~(0b11111111 << 8)) | (r << 8); }
 function getValue( x,y )    { return (world[y][x] & (0b11111111 << 8)) >> 8; }
-function addValue( x,y, v ) { setValue( x,y, getValue(x,y)+v ); } // careful to avoid wraparound...
+function addValue( x,y, v ) { setValue( x,y, getValue(x,y)+v ); return getValue(x,y); } // careful to avoid wraparound...
 
 // set all particle properties based on type
 function setParticleFromType( x,y, t )
@@ -267,9 +266,10 @@ function setParticleFromType( x,y, t )
     if (t == PLANT || t == WALL || t == HOLE || t == VIRUS || t == CLONE)
         setRigid(x,y);
 
-    // special values
-    if (t == FIRE)
-        setValue(x,y, 255);
+    // special values all start at 0, increase on exposure to a specific element,
+    //   then transmute when value reaches 255
+    if (t == FIRE) // etc
+        setValue(x,y, 0);
 
     // ACTIVE is always set (to true) at beginning of particle processing
     //   does not apply to particles just transformed from interactions
@@ -492,9 +492,9 @@ function updateWorld()
                         setParticleFromType(x,y, AIR); // extinguished
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], WATER);
                     }
-                    else if ( particleType == FIRE && neighborType == SAND )
+                    else if ( particleType == FIRE && neighborType == ROCK )
                     {
-                        clearActive(x,y); // each particle can only affect 1 neighbor per tick
+                        setParticleFromType(x,y, AIR); // ROCK absorbs FIRE
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], LAVA);
                     }
                     else if ( particleType == FIRE && neighborType == MUD )
@@ -504,9 +504,8 @@ function updateWorld()
                     }
                     else if ( particleType == FIRE && neighborType == AIR )
                     {
-                        addValue(x,y, -1);
-                        if ( getValue(x,y) == 0 )
-                            setParticleFromType(x,y, AIR); // cooled | burnt out
+                        if ( Math.random() < 0.95 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, AIR);
                     }
                     else if ( particleType == LAVA && neighborType == OIL )
                     {
@@ -531,20 +530,24 @@ function updateWorld()
                     }
                     else if ( particleType == LAVA && neighborType == MUD )
                     {
+                        // the FIRE in the LAVA=(FIRE+ROCK) and the WATER in the MUD=(WATER+SAND) cancel out
                         setParticleFromType(x,y, ROCK);
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], SAND);
                     }
                     else if ( particleType == LAVA && neighborType == AIR )
                     {
-                        // TODO
+                        if ( Math.random() < 0.20 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, ROCK);
                     }
-                    else if ( particleType == PLANT && neighborType == WATER )
+                    else if ( particleType == WATER && neighborType == PLANT )
                     {
-                        // TODO PLANT
+                        if ( Math.random() < 0.50 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, PLANT);
                     }
                     else if ( particleType == PLANT && neighborType == MUD )
                     {
-                        // TODO PLANT
+                        if ( Math.random() < 0.10 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, OIL);
                     }
                     else if ( particleType == ICE && neighborType == VAPOR )
                     {
@@ -553,20 +556,23 @@ function updateWorld()
                     }
                     else if ( particleType == ICE && neighborType == AIR )
                     {
-                        // TODO WATER
+                        if ( Math.random() < 0.10 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, WATER);
                     }
                     else if ( particleType == WATER && neighborType == SAND )
                     {
-                        setParticleFromType(x,y, AIR);
+                        setParticleFromType(x,y, AIR); // SAND absorbs WATER
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], MUD);
                     }
                     else if ( particleType == MUD && neighborType == AIR ) 
                     {
-                        // TODO SAND
+                        if ( Math.random() < 0.10 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, SAND);
                     }
                     else if ( particleType == VAPOR && neighborType == AIR ) 
                     {
-                        // TODO WATER
+                        if ( Math.random() < 0.10 && addValue(x,y, 1) == 255 )
+                            setParticleFromType(x,y, WATER);
                     }
                     // 20 interactions
                 }
@@ -660,7 +666,7 @@ function convertWorldDataToPixelData()
             pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
             pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
             pixelData[i + 2] = colorArray[ particleType ][2] + offsetValue; // Blue
-            pixelData[i + 3] = colorArray[ particleType ][3] = (particleType == FIRE ? getValue(x,y) : 255); // Alpha
+            pixelData[i + 3] = colorArray[ particleType ][3] = 255; // Alpha
 
             i += 4;
         }
@@ -853,7 +859,7 @@ function initializeCanvas()
 
 function initializeWebGL()
 {    
-    gl = canvas.getContext("webgl2", { premultipliedAlpha: false });
+    gl = canvas.getContext("webgl2");
 
     if (gl == null) 
     {
@@ -861,7 +867,7 @@ function initializeWebGL()
         return;
     }
 
-    gl.clearColor(0.0, 0.0, 0.0, 0.5);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
     shaderProgram = initProgram(gl, vertexShaderCode, fragmentShaderCode);
 
