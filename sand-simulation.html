@@ -680,16 +680,38 @@ function sendPixelDataToTexture()
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, textureWidth, textureHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
 }
 
+var m, b, sign;
 function drawParticles()
 {
     r = 2;
 
+    // draw a single box
     for (let dx = 0; dx < r; dx++)
         for (let dy = 0; dy < r; dy++)
             if ( isValid(drawPixelX + dx, drawPixelY + dy) )
                 setParticleFromType( drawPixelX + dx, drawPixelY + dy, selectedType );
 
-    
+    // draw all the pixels in a line from last drawn pixel to current drawn pixel
+    if (lastPixelX != null)
+    {
+        let distX = drawPixelX - lastPixelX;
+        let distY = drawPixelY - lastPixelY;
+        let steps = Math.max( Math.abs(distX), Math.abs(distY) );
+        let deltaX = distX / steps;
+        let deltaY = distY / steps;
+        for (let i = 0; i <= steps; i++)
+        {
+            let x = Math.round(lastPixelX + i*deltaX);
+            let y = Math.round(lastPixelY + i*deltaY);
+            // setParticleFromType( Math.round(lastPixelX + i*deltaX), Math.round(lastPixelY + i*deltaY), selectedType );
+            for (let dx = 0; dx < r; dx++)
+                for (let dy = 0; dy < r; dy++)
+                    if ( isValid(x + dx, y + dy) )
+                        setParticleFromType( x + dx, y + dy, selectedType );
+        }
+    }
+    lastPixelX = drawPixelX;
+    lastPixelY = drawPixelY;
 }
 
 function initializeTimer()
@@ -795,6 +817,7 @@ function render()
 }
 
 var drawActive = false, drawPixelX = 0, drawPixelY = 0;
+var lastPixelX = null, lastPixelY = null; // use for drawing lines betweeen pixels
 
 function setDrawActiveMouse(event)
 {
@@ -832,6 +855,8 @@ function setDrawInactive(event)
 {
     event.preventDefault();
     drawActive = false;
+    lastPixelX = null;
+    lastPixelY = null;
 }
 
 function onKeyDown(event)
