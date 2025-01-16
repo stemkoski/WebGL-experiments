@@ -5,24 +5,32 @@
     <meta charset="utf-8" />
     <title>WebGL Demo</title>
     <style>
+
         *
         {
             font-family:Verdana, Geneva, Tahoma, sans-serif; 
             font-size: 20px;
             font-weight: bold;
         }
+
         body
         {
-            background-color: black;
+            background-color: #AAAAAA;
         }
+
         button
         {
-            width:120px;
-            margin: 6px;
-            padding: 6px;
+            width: 140px;
+            margin: 0px 4px 0px 4px;
+            height: 55px;
             border: 2px solid black;
             border-radius: 8px;
             background-color: #8899AA;
+        }
+
+        .active 
+        {
+            outline: 4px solid white;
         }
 
         .font-bw
@@ -37,6 +45,7 @@
                 0px 0px 7px white,
                 0px 0px 8px white;
         }
+
         .font-wb
         {
             color: white;
@@ -49,10 +58,17 @@
                 0px 0px 7px black,
                 0px 0px 8px black;
         }
+
         td
         {
             text-align: center;
-            border: 1px solid black;
+            border: 0px solid black;
+            height: 60px;
+        }
+
+        .small-caps
+        {
+            font-variant: small-caps;
         }
 
     </style>
@@ -61,24 +77,82 @@
 <body>
 <table>
     <tr>
-        <td><canvas id="glcanvas" width="512" height="512"></canvas></td>
+        <td rowspan="12"><canvas id="glcanvas" width="512" height="512"></canvas></td>
+        <td class="font-bw small-caps"><u>Elements</u></td>
+        <td class="font-bw small-caps"><u>Specials</u></td>
+        <td class="font-wb small-caps"><u>Brush Size</u></td>
+    </tr>
+    <tr>
+        <td><button id="vaporButton"   class="font-bw" style="background-color: rgb(160, 180, 210);">Vapor</button></td>
+        <td><button id="barrierButton" class="font-bw" style="background-color: rgb(160, 130, 100);">Barrier</button></td>
+        <td><button id="smallButton"   class="font-wb">Small</button></td>
+    </tr>
+    <tr>
+        <td><button id="airButton"     class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button></td>
+        <td><button id="virusButton"   class="font-bw" style="background-color: rgb(235, 180, 180);">Virus</button></td>
+        <td><button id="largeButton"   class="font-wb">Large</button></td>
+    </tr>
+    <tr>
+        <td><button id="fireButton"    class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button></td>
+        <td><button id="cloneButton"   class="font-bw" style="background-color: rgb(150, 235, 150);">Clone</button></td>
+    </tr>
+    <tr>
+        <td><button id="oilButton"     class="font-bw" style="background-color: rgb(150,  20, 180);">Oil</button></td>
+        <td><button id="mutateButton"  class="font-bw" style="background-color: rgb(160, 120, 200);">Mutate</button></td>
+    </tr>
+    <tr>
+        <td><button id="waterButton"   class="font-bw" style="background-color: rgb( 20,  20, 235);">Water</button></td>
+        <td><button id="holeButton"    class="font-bw" style="background-color: rgb( 50,  50,  50);">Hole</button></td>
+    </tr>
+    <tr>
+        <td><button id="lavaButton"    class="font-bw" style="background-color: rgb(235, 128,  20);">Lava</button></td>
+        <td class="font-wb small-caps"><u>Speed</u></td>
+    </tr>
+    <tr>
+        <td><button id="plantButton"   class="font-bw" style="background-color: rgb( 20, 180,  20);">Plant</button></td>
+        <td><button id="pauseButton" class="font-wb">Pause</button></td>
+        <td class="font-wb small-caps"><u>General</u></td>
+    </tr>
+    <tr>
+        <td><button id="mudButton"     class="font-bw" style="background-color: rgb(150,  90,  30);">Mud</button></td>
+        <td><button id="slowestButton" class="font-wb">Slow</button></td>
+        <td><button id="resetButton"   class="font-wb">Reset</button></td>
+    </tr>
+    <tr>
+        <td><button id="iceButton"     class="font-bw" style="background-color: rgb(100, 200, 235);">Ice</button></td>
+        <td><button id="slowButton" class="font-wb">Moderate</button></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td><button id="sandButton"    class="font-bw" style="background-color: rgb(235, 235,  20);">Sand</button></td>
+        <td><button id="normalButton" class="font-wb">Normal</button></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td><button id="rockButton"    class="font-bw" style="background-color: rgb(150, 150, 150);">Rock</button></td>
+        <td><button id="fastButton" class="font-wb">Fast</button></td>
+        <td></td>
+    </tr>
+        <!--
+        ORIGINAL LAYOUT
         <td>
             <u>Elements</u> <br>
-            <button id="vaporButton" class="font-bw" style="background-color: rgb(160, 180, 210);">Vapor</button> <br>
-            <button id="airButton"   class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
-            <button id="fireButton"  class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
-            <button id="oilButton"   class="font-bw" style="background-color: rgb(200,  20, 235);">Oil</button> <br>
-            <button id="waterButton" class="font-bw" style="background-color: rgb(20, 20, 235);">Water</button> <br>
-            <button id="lavaButton"  class="font-bw" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
-            <button id="plantButton" class="font-bw" style="background-color: rgb( 20, 180,  20);">Plant</button> <br>
-            <button id="mudButton"   class="font-bw" style="background-color: rgb(150,  90,  30);">Mud</button> <br>
-            <button id="iceButton"   class="font-bw" style="background-color: rgb(100, 200, 235);">Ice</button> <br>
-            <button id="sandButton"  class="font-bw" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
-            <button id="rockButton"  class="font-bw" style="background-color: rgb(150, 150, 150);">Rock</button> <br>
-            <button id="wallButton"  class="font-bw" style="background-color: rgb(100, 100, 100);">Wall</button> <br>
-            <button id="virusButton" class="font-bw" style="background-color: rgb(235, 180, 180);">Virus</button> <br>
-            <button id="cloneButton" class="font-bw" style="background-color: rgb(150, 235, 150);">Clone</button> <br>
-            <button id="holeButton"  class="font-bw" style="background-color: rgb( 50,  50,  50);">Hole</button>
+            <button id="vaporButton"   class="font-bw" style="background-color: rgb(160, 180, 210);">Vapor</button> <br>
+            <button id="airButton"     class="font-bw" style="background-color: rgb( 20,  20,  20);">Air</button> <br>
+            <button id="fireButton"    class="font-bw" style="background-color: rgb(235,  20,  20);">Fire</button> <br>
+            <button id="oilButton"     class="font-bw" style="background-color: rgb(150,  20, 180);">Oil</button> <br>
+            <button id="waterButton"   class="font-bw" style="background-color: rgb( 20,  20, 235);">Water</button> <br>
+            <button id="lavaButton"    class="font-bw" style="background-color: rgb(235, 128,  20);">Lava</button> <br>
+            <button id="plantButton"   class="font-bw" style="background-color: rgb( 20, 180,  20);">Plant</button> <br>
+            <button id="mudButton"     class="font-bw" style="background-color: rgb(150,  90,  30);">Mud</button> <br>
+            <button id="iceButton"     class="font-bw" style="background-color: rgb(100, 200, 235);">Ice</button> <br>
+            <button id="sandButton"    class="font-bw" style="background-color: rgb(235, 235,  20);">Sand</button> <br>
+            <button id="rockButton"    class="font-bw" style="background-color: rgb(150, 150, 150);">Rock</button> <br>
+            <button id="barrierButton" class="font-bw" style="background-color: rgb(160, 130, 100);">Barrier</button> <br>
+            <button id="virusButton"   class="font-bw" style="background-color: rgb(235, 180, 180);">Virus</button> <br>
+            <button id="cloneButton"   class="font-bw" style="background-color: rgb(150, 235, 150);">Clone</button> <br>
+            <button id="mutateButton"  class="font-bw" style="background-color: rgb(160, 120, 200);">Mutate</button> <br>
+            <button id="holeButton"    class="font-bw" style="background-color: rgb( 50,  50,  50);">Hole</button>
         </td>
         <td>
             <button id="pauseButton" class="font-wb">Pause</button> <br>
@@ -87,6 +161,7 @@
             <button id="normalButton" class="font-wb">Normal</button> <br>
             <button id="fastButton" class="font-wb">Fast</button>
         </td>
+        -->
     </tr>
 </table>
 </body>
@@ -100,15 +175,51 @@ canvasWidth = 800, canvasHeight = 800,
 pixelData, texture, shaderProgram,
 currentTime, previousTime, deltaTime, elapsedTime, tick = 0, fpsTimer = 0, fpsTicker = 0; 
 
-// TODO: use setInterval instead?
-var loopSpeed = 16, timeoutID = null; // need ID to stop current setTimeout
+// UI information
+var activeSpeedButtonId;
 
-// TODO: fix pause mechanic
-document.getElementById("pauseButton"  ).addEventListener("click", () => { loopSpeed = 1000; } ); // 1 FPD: Frame Per Day :)
-document.getElementById("slowestButton").addEventListener("click", () => { loopSpeed = 1000; } );
-document.getElementById("slowButton"   ).addEventListener("click", () => { loopSpeed = 100; } );
-document.getElementById("normalButton" ).addEventListener("click", () => { loopSpeed = 16;  } );
-document.getElementById("fastButton"   ).addEventListener("click", () => { loopSpeed = 4; } );
+var loopSpeed = 16, paused = false;
+document.getElementById("pauseButton"  ).addEventListener("click", (event) => { selectSpeed(event.srcElement.id,   -1); } );
+document.getElementById("slowestButton").addEventListener("click", (event) => { selectSpeed(event.srcElement.id, 1000); } );
+document.getElementById("slowButton"   ).addEventListener("click", (event) => { selectSpeed(event.srcElement.id,  100); } );
+document.getElementById("normalButton" ).addEventListener("click", (event) => { selectSpeed(event.srcElement.id,   16); } );
+document.getElementById("fastButton"   ).addEventListener("click", (event) => { selectSpeed(event.srcElement.id,    4); } );
+
+function selectSpeed( id, speed )
+{
+    // change style of previously active button
+    if (activeSpeedButtonId != null)
+        document.getElementById(activeSpeedButtonId).classList.remove("active");
+
+    // update with new information
+    activeSpeedButtonId = id;
+    document.getElementById(activeSpeedButtonId).classList.add("active");
+    paused    = (speed < 0);
+    loopSpeed = (speed > 0) ? speed : loopSpeed;
+}
+
+document.getElementById("normalButton").click();
+
+var activeSizeButtonId;
+
+document.getElementById("smallButton").addEventListener("click", (event) => { selectDrawRadius(event.srcElement.id, 1); } );
+document.getElementById("largeButton").addEventListener("click", (event) => { selectDrawRadius(event.srcElement.id, 3); } );
+function selectDrawRadius( id, size )
+{
+    // change style of previously active button
+    if (activeSizeButtonId != null)
+        document.getElementById(activeSizeButtonId).classList.remove("active");
+
+    // update with new information
+    activeSizeButtonId = id;
+    document.getElementById(activeSizeButtonId).classList.add("active");
+    drawRadius = size;
+}
+
+document.getElementById("largeButton").click();
+
+document.getElementById("resetButton").addEventListener("click", (event) => { initializeWorld(); convertWorldDataToPixelData(); sendPixelDataToTexture(); } );
+
 
 /**
  *   Each point in the world is represented by a number;
@@ -143,57 +254,81 @@ const TYPE_BITS   = [0,1,2,3],
 const VAPOR =  0,   AIR =  1,  FIRE =  2,   
         OIL =  3, WATER =  4,   MUD =  5,   LAVA =  6,
       PLANT =  7,   ICE =  8,  SAND =  9,   ROCK = 10, 
-       WALL = 11, VIRUS = 12, CLONE = 13, MUTATE = 14, HOLE = 15;
+    BARRIER = 11, VIRUS = 12, CLONE = 13, MUTATE = 14, HOLE = 15;
 
-var selectedType = ROCK, borderType = WALL;
+var drawType, borderType = BARRIER;
 
-var gasTypes = [VAPOR, AIR];
-var liquidTypes = [OIL, WATER, LAVA];
-var solidTypes = [PLANT, MUD, ICE, SAND, ROCK, FIRE]; 
+var     gasTypes = [VAPOR, AIR];
+var  liquidTypes = [OIL, WATER, LAVA];
+var   solidTypes = [PLANT, MUD, ICE, SAND, ROCK, FIRE]; 
 // FIRE is included in list of solids so that it doesn't flow sideways like liquid/gas
 // FIRE has low index because "heat rises"
+
+// special types don't affect other special types
+var specialTypes = [BARRIER, VIRUS, CLONE, MUTATE, HOLE];
+
+// results of particle mutation (non-special && non-AIR)
+var  mutateTypes = [VAPOR, OIL, WATER, LAVA, PLANT, MUD, ICE, SAND, ROCK, FIRE];
+function selectRandom(array) { return array[Math.floor(Math.random()*array.length)]; }
 
 // the particle types that can change other particle types
 // (also technically AIR, but this is included by the types below, 
 //  and checking all neighbors of every AIR each tick would take a lot of time)
-var transmuteTypes = [FIRE, LAVA, WATER, ICE, PLANT, MUD, VAPOR]; // into: [AIR, ROCK, PLANT, WATER, OIL, SAND, WATER]
+var transmuteTypes = [FIRE, LAVA, WATER, ICE, PLANT, MUD, VAPOR]; // change into: [AIR, ROCK, PLANT, WATER, OIL, SAND, WATER]
 // reusable variables
 var particleType, neighborType;
 // used when checking all neighbors of a particle (possible particle-particle interactions)
 var offsets = [ [-1,-1], [0,-1], [1,-1], [1,0], [1,1], [0,1], [-1,1], [-1,0] ];
 
-document.getElementById("vaporButton").addEventListener("click", () => { selectedType = VAPOR } );
-document.getElementById("airButton").addEventListener("click", () => { selectedType = AIR } );
-document.getElementById("fireButton").addEventListener("click", () => { selectedType = FIRE } );
-document.getElementById("oilButton").addEventListener("click", () => { selectedType = OIL } );
-document.getElementById("waterButton").addEventListener("click", () => { selectedType = WATER } );
-document.getElementById("lavaButton").addEventListener("click", () => { selectedType = LAVA } );
-document.getElementById("plantButton").addEventListener("click", () => { selectedType = PLANT } );
-document.getElementById("mudButton").addEventListener("click", () => { selectedType = MUD } );
-document.getElementById("iceButton").addEventListener("click", () => { selectedType = ICE } );
-document.getElementById("sandButton").addEventListener("click", () => { selectedType = SAND } );
-document.getElementById("rockButton").addEventListener("click", () => { selectedType = ROCK } );
-document.getElementById("wallButton").addEventListener("click", () => { selectedType = WALL } );
-document.getElementById("virusButton").addEventListener("click", () => { selectedType = VIRUS } );
-document.getElementById("cloneButton").addEventListener("click", () => { selectedType = CLONE } );
-document.getElementById("holeButton").addEventListener("click", () => { selectedType = HOLE } );
+document.getElementById( "vaporButton"   ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, VAPOR); } );
+document.getElementById( "airButton"     ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, AIR) } );
+document.getElementById( "fireButton"    ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, FIRE) } );
+document.getElementById( "oilButton"     ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, OIL) } );
+document.getElementById( "waterButton"   ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, WATER) } );
+document.getElementById( "lavaButton"    ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, LAVA) } );
+document.getElementById( "plantButton"   ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, PLANT) } );
+document.getElementById( "mudButton"     ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, MUD) } );
+document.getElementById( "iceButton"     ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, ICE) } );
+document.getElementById( "sandButton"    ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, SAND) } );
+document.getElementById( "rockButton"    ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, ROCK) } );
+document.getElementById( "barrierButton" ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, BARRIER) } );
+document.getElementById( "virusButton"   ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, VIRUS) } );
+document.getElementById( "cloneButton"   ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, CLONE) } );
+document.getElementById( "mutateButton"  ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, MUTATE) } );
+document.getElementById( "holeButton"    ).addEventListener("click", (event) => { selectDrawType(event.srcElement.id, HOLE) } );
+
+var activeParticleButtonId;
+function selectDrawType( id, type )
+{
+    // change style of previously active button
+    if (activeParticleButtonId != null)
+        document.getElementById(activeParticleButtonId).classList.remove("active");
+
+    // update with new information
+    activeParticleButtonId = id;
+    document.getElementById(activeParticleButtonId).classList.add("active");
+    drawType = type;
+}
+
+document.getElementById("rockButton").click();
 
 var colorArray = [];
-colorArray[VAPOR] = [160, 180, 210, 255]; // white (just a hint of blue)
-colorArray[AIR]   = [ 20,  20,  20, 255]; // black // no randomness
-colorArray[FIRE]  = [235,  40,  40, 255]; // red
-colorArray[OIL]   = [200,  20, 235, 255]; // purple
-colorArray[WATER] = [ 20,  20, 235, 255]; // dark blue
-colorArray[LAVA]  = [235, 128,  20, 255]; // orange
-colorArray[PLANT] = [ 20, 180,  20, 255]; // dark green
-colorArray[MUD]   = [150,  90,  30, 255]; // brown
-colorArray[ICE]   = [100, 200, 235, 255]; // light blue
-colorArray[SAND]  = [235, 235,  20, 255]; // yellow
-colorArray[ROCK]  = [150, 150, 150, 255]; // light gray
-colorArray[WALL]  = [100, 100, 100, 255]; // gray // no randomness // TODO: tan sparkle
-colorArray[VIRUS] = [235, 180, 180, 255]; // pink, animated
-colorArray[CLONE] = [150, 235, 150, 255]; // light green, animated
-colorArray[HOLE]  = [ 50,  50,  50, 255]; // dark gray, animated
+colorArray[VAPOR]   = [160, 180, 210, 255]; // white (just a hint of blue)
+colorArray[AIR]     = [ 20,  20,  20, 255]; // black
+colorArray[FIRE]    = [235,  40,  40, 255]; // red
+colorArray[OIL]     = [150,  20, 180, 255]; // purple
+colorArray[WATER]   = [ 20,  20, 235, 255]; // blue
+colorArray[LAVA]    = [235, 128,  20, 255]; // orange
+colorArray[PLANT]   = [ 20, 180,  20, 255]; // green
+colorArray[MUD]     = [150,  90,  30, 255]; // brown
+colorArray[ICE]     = [100, 200, 235, 255]; // light blue
+colorArray[SAND]    = [235, 235,  20, 255]; // yellow
+colorArray[ROCK]    = [150, 150, 150, 255]; // light gray
+colorArray[BARRIER] = [170, 140, 110, 255]; // light brown
+colorArray[VIRUS]   = [235, 180, 180, 255]; // light red
+colorArray[CLONE]   = [150, 235, 150, 255]; // light green
+colorArray[MUTATE]  = [160, 120, 200, 255]; // light purple
+colorArray[HOLE]    = [ 50,  50,  50, 255]; // dark gray
 
 // for particle at position (x,y), change bit at index N to 1
 function setBit( x,y, N ) { world[y][x] = world[y][x] | (1 << N); }
@@ -246,30 +381,29 @@ function getValue( x,y )    { return (world[y][x] & (0b11111111 << 8)) >> 8; }
 function addValue( x,y, v ) { setValue( x,y, getValue(x,y)+v ); return getValue(x,y); } // careful to avoid wraparound...
 
 // set all particle properties based on type
-function setParticleFromType( x,y, t )
+function setParticleFromType( x,y, pType )
 {
     clearAll(x,y);
-    setType(x,y, t);
+    setType(x,y, pType);
     
-    // everything except WALL/AIR has random coloring
-    if (t != WALL && t != AIR)
+    // everything except AIR has random coloring
+    if ( pType != AIR )
         setRandom( x,y, Math.floor(10 * Math.random()) );
 
-    if ( gasTypes.includes(t) ) // FIRE?
+    if ( gasTypes.includes(pType) )
         setGas(x,y);
-    else if ( liquidTypes.includes(t) )
+    else if ( liquidTypes.includes(pType) )
         setLiquid(x,y);
-    else // if ( solidTypes.includes(t) ) 
+    else // if ( solidTypes.includes(pType) ) 
         setSolid(x,y);
 
     // things that will never move
-    if (t == PLANT || t == WALL || t == HOLE || t == VIRUS || t == CLONE)
+    if ( pType == PLANT || specialTypes.includes(pType) )
         setRigid(x,y);
 
     // special values all start at 0, increase on exposure to a specific element,
     //   then transmute when value reaches 255
-    if (t == FIRE) // etc
-        setValue(x,y, 0);
+    clearValue(x,y);
 
     // ACTIVE is always set (to true) at beginning of particle processing
     //   does not apply to particles just transformed from interactions
@@ -297,12 +431,7 @@ function initializeWorld()
         for (let x = 0; x < worldWidth; x++)
             setParticleFromType(x,y, AIR);
 
-    setParticleFromType(4,2, SAND);
-    setParticleFromType(4,3, SAND);
-    setParticleFromType(4,4, SAND);
-    setParticleFromType(4,5, SAND);
-    
-    // set borders on all sides (either WALL or HOLE), avoids out-of-bounds array index errors
+    // set borders on all sides (either BARRIER or HOLE), avoids out-of-bounds array index errors
     for (let x = 0; x < worldWidth; x++)
     {
         setParticleFromType(x, 0, borderType);
@@ -397,7 +526,7 @@ function updateWorld()
             setActive(x,y);
         }
 
-    // redraw borders on all sides (either WALL or HOLE), avoids out-of-bounds array index errors when moving particles
+    // redraw borders on all sides (either BARRIER or HOLE), avoids out-of-bounds array index errors when moving particles
     for (let x = 0; x < worldWidth; x++)
     {
         setParticleFromType(x, 0, borderType);
@@ -424,16 +553,17 @@ function updateWorld()
 
             particleType = getType(x,y);
 
-            // animation "sparkle" effects
-            if ( getType(x,y) == HOLE || getType(x,y) == CLONE || getType(x,y) == VIRUS )
-                addRandom(x,y,1);
+            // animation "sparkle" effects for special types of particles
+            // if ( specialTypes.includes(particleType) )
+            //    addRandom(x,y,1);
 
             // special interactions
             if ( particleType == HOLE && isActive(x,y) )
             {
                 for (let i = 0; i < 8; i++)
                 {
-                    if ( getType(x+offsets[i][0], y+offsets[i][1]) != HOLE )
+                    neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if ( !specialTypes.includes( neighborType ) )
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], AIR);
                 }
             }
@@ -442,7 +572,7 @@ function updateWorld()
                 for (let i = 0; i < 8; i++)
                 {
                     neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
-                    if ( isActive(x,y) && neighborType != AIR && neighborType != VIRUS )
+                    if ( isActive(x,y) && neighborType != AIR && !specialTypes.includes( neighborType ) )
                     {
                         clearActive(x,y);
                         setParticleFromType(x+offsets[i][0], y+offsets[i][1], VIRUS);
@@ -454,8 +584,26 @@ function updateWorld()
                 for (let i = 0; i < 8; i++)
                 {
                     neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
-                    if (neighborType != CLONE && neighborType != AIR && neighborType != WALL)
+                    if (neighborType == CLONE)
+                    {
+                        if ( x%2 == 0 && y%2 == 0 )
+                            setParticleFromType(x+offsets[i][0], y+offsets[i][1], AIR);
+                        else
+                            setParticleFromType(x,y, AIR);
+                    }
+                    else if (neighborType != AIR && !specialTypes.includes( neighborType ))
                         setParticleFromType(x-offsets[i][0], y-offsets[i][1], neighborType);
+                }
+            }
+            else if ( particleType == MUTATE && isActive(x,y) )
+            {   
+                for (let i = 0; i < 8; i++)
+                {
+                    neighborType = getType(x+offsets[i][0], y+offsets[i][1]);
+                    if (neighborType != AIR && !specialTypes.includes( neighborType ))
+                        setParticleFromType(x+offsets[i][0], y+offsets[i][1], selectRandom(mutateTypes));
+
+                    // Note: mutate into PLANT not possible since it doesn't move, it keeps changing...
                 }
             }
 
@@ -660,17 +808,25 @@ function convertWorldDataToPixelData()
     {
         for (let x = 0; x < worldWidth; x++)
         {
-            particleType = getType(x,y);
-
-            offsetValue = 4 * (getRandom(x,y) - 5);
-            pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
-            pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
-            pixelData[i + 2] = colorArray[ particleType ][2] + offsetValue; // Blue
-            pixelData[i + 3] = colorArray[ particleType ][3] = 255; // Alpha
-
+            if (y == worldHeight-1 || y == 0 || x == worldWidth-1 || x == 0)
+            {
+                // border colors are black
+                pixelData[i + 0] =  42; // Red
+                pixelData[i + 1] =  42; // Green
+                pixelData[i + 2] =  42; // Blue
+                pixelData[i + 3] = 255; // Alpha
+            }
+            else
+            {
+                particleType = getType(x,y);
+                offsetValue = 4 * (getRandom(x,y) - 5);
+                pixelData[i + 0] = colorArray[ particleType ][0] + offsetValue; // Red
+                pixelData[i + 1] = colorArray[ particleType ][1] + offsetValue; // Green
+                pixelData[i + 2] = colorArray[ particleType ][2] + offsetValue; // Blue
+                pixelData[i + 3] = 255; // Alpha
+            }
             i += 4;
         }
-        // console.log(i)
     }
 }
 
@@ -678,40 +834,6 @@ function sendPixelDataToTexture()
 {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, textureWidth, textureHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
-}
-
-var m, b, sign;
-function drawParticles()
-{
-    r = 2;
-
-    // draw a single box
-    for (let dx = 0; dx < r; dx++)
-        for (let dy = 0; dy < r; dy++)
-            if ( isValid(drawPixelX + dx, drawPixelY + dy) )
-                setParticleFromType( drawPixelX + dx, drawPixelY + dy, selectedType );
-
-    // draw all the pixels in a line from last drawn pixel to current drawn pixel
-    if (lastPixelX != null)
-    {
-        let distX = drawPixelX - lastPixelX;
-        let distY = drawPixelY - lastPixelY;
-        let steps = Math.max( Math.abs(distX), Math.abs(distY) );
-        let deltaX = distX / steps;
-        let deltaY = distY / steps;
-        for (let i = 0; i <= steps; i++)
-        {
-            let x = Math.round(lastPixelX + i*deltaX);
-            let y = Math.round(lastPixelY + i*deltaY);
-            // setParticleFromType( Math.round(lastPixelX + i*deltaX), Math.round(lastPixelY + i*deltaY), selectedType );
-            for (let dx = 0; dx < r; dx++)
-                for (let dy = 0; dy < r; dy++)
-                    if ( isValid(x + dx, y + dy) )
-                        setParticleFromType( x + dx, y + dy, selectedType );
-        }
-    }
-    lastPixelX = drawPixelX;
-    lastPixelY = drawPixelY;
 }
 
 function initializeTimer()
@@ -739,30 +861,6 @@ function updateTimer()
     }
 }
 
-// optional: user code
-function update()
-{
-    currentTime = performance.now();
-    deltaTime = (currentTime - previousTime) / 1000.0;
-    elapsedTime += deltaTime;
-    previousTime = currentTime;
-    tick++;
-    
-    fpsTimer += deltaTime;
-    fpsTicker++;
-
-    if (fpsTimer >= 1.0)
-    {
-        console.log("FPS: " + fpsTicker);
-        fpsTimer = 0;
-        fpsTicker = 0;
-    }
-
-    updateWorld();
-    convertWorldDataToPixelData();
-    sendPixelDataToTexture();
-}
-
 function run()
 {
     initializeTimer();
@@ -782,10 +880,11 @@ function run()
 
 function simulationLoop()
 {
-    // TODO: switch to setInterval
-    // control update rate - can attain speed beyond refresh rate ?!
     timeoutID = setTimeout( simulationLoop, loopSpeed ); 
     
+    if (paused)
+        return;
+
     updateTimer();
     updateWorld();
     convertWorldDataToPixelData();
@@ -808,16 +907,39 @@ function drawRenderLoop()
     render();
 }
 
-// render the texture to the canvas
-function render()
-{ 
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(shaderProgram);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-}
-
-var drawActive = false, drawPixelX = 0, drawPixelY = 0;
+var drawActive = false, drawPixelX = 0, drawPixelY = 0, drawRadius;
 var lastPixelX = null, lastPixelY = null; // use for drawing lines betweeen pixels
+
+function drawParticles()
+{
+    // draw a single box
+    for (let dx = 0; dx < drawRadius; dx++)
+        for (let dy = 0; dy < drawRadius; dy++)
+            if ( isValid(drawPixelX + dx, drawPixelY + dy) )
+                setParticleFromType( drawPixelX + dx, drawPixelY + dy, drawType );
+
+    // draw all the pixels in a line from last drawn pixel to current drawn pixel
+    if (lastPixelX != null)
+    {
+        let distX = drawPixelX - lastPixelX;
+        let distY = drawPixelY - lastPixelY;
+        let steps = Math.max( Math.abs(distX), Math.abs(distY) );
+        let deltaX = distX / steps;
+        let deltaY = distY / steps;
+        for (let i = 0; i <= steps; i++)
+        {
+            let x = Math.round(lastPixelX + i*deltaX);
+            let y = Math.round(lastPixelY + i*deltaY);
+            // setParticleFromType( Math.round(lastPixelX + i*deltaX), Math.round(lastPixelY + i*deltaY), drawType );
+            for (let dx = 0; dx < drawRadius; dx++)
+                for (let dy = 0; dy < drawRadius; dy++)
+                    if ( isValid(x + dx, y + dy) )
+                        setParticleFromType( x + dx, y + dy, drawType );
+        }
+    }
+    lastPixelX = drawPixelX;
+    lastPixelY = drawPixelY;
+}
 
 function setDrawActiveMouse(event)
 {
@@ -859,10 +981,12 @@ function setDrawInactive(event)
     lastPixelY = null;
 }
 
-function onKeyDown(event)
-{
-    if (event.keyCode >= 48 && event.keyCode <= 57)
-        selectedType = event.keyCode - 48;
+// render the texture to the canvas
+function render()
+{ 
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(shaderProgram);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
 function initializeCanvas()
@@ -879,7 +1003,6 @@ function initializeCanvas()
     canvas.addEventListener("touchstart", setDrawActiveTouch);
     canvas.addEventListener("touchmove",  setDrawPixelFromTouch);
     canvas.addEventListener("touchend",   setDrawInactive);
-    document.addEventListener("keydown",  onKeyDown);
 }
 
 function initializeWebGL()
